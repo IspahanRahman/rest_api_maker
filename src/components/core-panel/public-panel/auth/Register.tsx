@@ -1,66 +1,98 @@
 'use client'
 import React, { useState } from 'react'
-import { useLoginMutation } from '@/apis/mutation/auth/useLoginMutation'
+import { useRegisterMutation } from '@/apis/mutation/auth/useRegisterMutation'
 import { toast } from 'react-toastify'
 import { LOCAL_STORAGE_KEYS } from '@/config/constants'
 import { useRouter, useParams } from 'next/navigation'
 import { FormInput } from '@/components/lib/ui-elements/form/FormInput'
 import { PasswordInput } from '@/components/lib/ui-elements/form/PasswordInput'
 import { LoadingButton } from '@/components/lib/ui-elements/button/LoadingButton'
-import { LogIn, Mail, Lock } from 'lucide-react'
+import { UserPlus, Mail, User, Lock, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
 
-const Login = () => {
-	const { submit, isLoading, data, errors, setData } = useLoginMutation()
+const Register = () => {
+	const { submit, isLoading, data, errors, setData } = useRegisterMutation()
 	const router = useRouter()
 	const params = useParams()
 	const locale = params?.locale || 'en'
-	const [rememberMe, setRememberMe] = useState(false)
+	const [agreedToTerms, setAgreedToTerms] = useState(false)
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
 
-		if (!data.email.trim() || !data.password.trim()) {
-			toast.error('Please fill in all fields')
+		// Validation
+		if (!data.name.trim()) {
+			toast.error('Please enter your full name')
+			return
+		}
+
+		if (!data.email.trim()) {
+			toast.error('Please enter your email')
+			return
+		}
+
+		if (!data.password.trim()) {
+			toast.error('Please enter a password')
+			return
+		}
+
+		if (data.password.length < 8) {
+			toast.error('Password must be at least 8 characters long')
+			return
+		}
+
+		if (data.password !== data.password_confirmation) {
+			toast.error('Passwords do not match')
+			return
+		}
+
+		if (!agreedToTerms) {
+			toast.error('Please accept the terms and conditions')
 			return
 		}
 
 		try {
 			const result = await submit()
 
-			if (!result?.status || !result?.data?.token) {
-				toast.error(result?.message || 'Login failed')
+			if (!result?.status) {
+				toast.error(result?.message || 'Registration failed')
 				return
 			}
 
-			const token = result.data.token
+			// If registration returns a token (auto-login)
+			if (result?.data?.token) {
+				const token = result.data.token
+				localStorage.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, token)
 
-			// Store token
-			localStorage.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, token)
+				if (result.data.user) {
+					localStorage.setItem(
+						LOCAL_STORAGE_KEYS.USER_PROFILE,
+						JSON.stringify(result.data.user)
+					)
+				}
 
-			// Store user profile if available
-			if (result.data.user) {
-				localStorage.setItem(
-					LOCAL_STORAGE_KEYS.USER_PROFILE,
-					JSON.stringify(result.data.user)
+				toast.success('Account created successfully! Welcome aboard.')
+				router.push(`/${locale}/dashboard`)
+			} else {
+				// If requires email verification
+				toast.success(
+					'Account created! Please check your email to verify your account.'
 				)
+				router.push(`/${locale}/login`)
 			}
-
-			// Set cookie if remember me is checked
-			if (rememberMe) {
-				document.cookie = `auth_token=${token}; path=/; max-age=2592000` // 30 days
-			}
-
-			toast.success('Login successful! Welcome back.')
-			router.push(`/${locale}/dashboard`)
 		} catch (error: any) {
 			const errorMessage =
 				error?.response?.data?.message ||
 				error?.message ||
-				'An error occurred during login'
+				'An error occurred during registration'
 			toast.error(errorMessage)
 		}
 	}
+
+	const passwordsMatch =
+		data.password &&
+		data.password_confirmation &&
+		data.password === data.password_confirmation
 
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-surface py-12 px-4 sm:px-6 lg:px-8">
@@ -68,19 +100,32 @@ const Login = () => {
 				{/* Header */}
 				<div className="text-center">
 					<div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary-100 dark:bg-primary-900/30 mb-4">
-						<LogIn className="w-8 h-8 text-primary-600 dark:text-primary-400" />
+						<UserPlus className="w-8 h-8 text-primary-600 dark:text-primary-400" />
 					</div>
 					<h2 className="text-3xl font-bold text-text-primary-sem">
-						Welcome back
+						Create your account
 					</h2>
 					<p className="mt-2 text-sm text-text-secondary">
-						Sign in to your account to continue
+						Join us today and start your journey
 					</p>
 				</div>
 
 				{/* Form Card */}
 				<div className="bg-surface-card rounded-2xl shadow-lg p-8">
-					<form onSubmit={handleSubmit} className="space-y-6">
+					<form onSubmit={handleSubmit} className="space-y-5">
+						{/* Full Name Input */}
+						<FormInput
+							label="Full Name"
+							type="text"
+							id="name"
+							placeholder="John Doe"
+							value={data.name}
+							onChange={e => setData('name', e.target.value)}
+							error={errors.name}
+							required
+							autoComplete="name"
+						/>
+
 						{/* Email Input */}
 						<FormInput
 							label="Email Address"
@@ -98,46 +143,79 @@ const Login = () => {
 						<PasswordInput
 							label="Password"
 							id="password"
-							placeholder="Enter your password"
+							placeholder="Create a strong password"
 							value={data.password}
 							onChange={e => setData('password', e.target.value)}
 							error={errors.password}
 							required
-							autoComplete="current-password"
+							autoComplete="new-password"
+							showStrength
 						/>
 
-						{/* Remember Me & Forgot Password */}
-						<div className="flex items-center justify-between">
-							<label className="flex items-center">
-								<input
-									type="checkbox"
-									checked={rememberMe}
-									onChange={e => setRememberMe(e.target.checked)}
-									className="w-4 h-4 rounded border-border-subtle text-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-								/>
-								<span className="ml-2 text-sm text-text-secondary">
-									Remember me
-								</span>
-							</label>
+						{/* Confirm Password Input */}
+						<div className="relative">
+							<PasswordInput
+								label="Confirm Password"
+								id="password_confirmation"
+								placeholder="Re-enter your password"
+								value={data.password_confirmation}
+								onChange={e =>
+									setData('password_confirmation', e.target.value)
+								}
+								error={errors.password_confirmation}
+								required
+								autoComplete="new-password"
+							/>
+							{passwordsMatch && (
+								<div className="absolute right-3 top-[2.6rem] text-success-500">
+									<CheckCircle2 className="w-5 h-5" />
+								</div>
+							)}
+						</div>
 
-							<Link
-								href={`/${locale}/forgot-password`}
-								className="text-sm font-medium text-primary-500 hover:text-primary-600 transition-colors"
+						{/* Terms and Conditions */}
+						<div className="flex items-start">
+							<input
+								type="checkbox"
+								id="terms"
+								checked={agreedToTerms}
+								onChange={e => setAgreedToTerms(e.target.checked)}
+								className="w-4 h-4 mt-1 rounded border-border-subtle text-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+							/>
+							<label
+								htmlFor="terms"
+								className="ml-2 text-sm text-text-secondary"
 							>
-								Forgot password?
-							</Link>
+								I agree to the{' '}
+								<Link
+									href="/terms"
+									className="text-primary-500 hover:text-primary-600 font-medium"
+									target="_blank"
+								>
+									Terms and Conditions
+								</Link>{' '}
+								and{' '}
+								<Link
+									href="/privacy"
+									className="text-primary-500 hover:text-primary-600 font-medium"
+									target="_blank"
+								>
+									Privacy Policy
+								</Link>
+							</label>
 						</div>
 
 						{/* Submit Button */}
 						<LoadingButton
 							type="submit"
 							isLoading={isLoading}
-							loadingText="Signing in..."
+							loadingText="Creating account..."
 							className="w-full"
 							size="lg"
+							disabled={!agreedToTerms}
 						>
-							<Mail className="w-5 h-5" />
-							Sign In
+							<UserPlus className="w-5 h-5" />
+							Create Account
 						</LoadingButton>
 
 						{/* Divider */}
@@ -147,12 +225,12 @@ const Login = () => {
 							</div>
 							<div className="relative flex justify-center text-sm">
 								<span className="px-4 bg-surface-card text-text-secondary">
-									Or continue with
+									Or sign up with
 								</span>
 							</div>
 						</div>
 
-						{/* Social Login Buttons */}
+						{/* Social Sign Up Buttons */}
 						<div className="grid grid-cols-2 gap-4">
 							<button
 								type="button"
@@ -192,15 +270,15 @@ const Login = () => {
 					</form>
 				</div>
 
-				{/* Sign Up Link */}
+				{/* Sign In Link */}
 				<div className="text-center">
 					<p className="text-sm text-text-secondary">
-						Don't have an account?{' '}
+						Already have an account?{' '}
 						<Link
-							href={`/${locale}/register`}
+							href={`/${locale}/login`}
 							className="font-semibold text-primary-500 hover:text-primary-600 transition-colors"
 						>
-							Sign up for free
+							Sign in
 						</Link>
 					</p>
 				</div>
@@ -209,4 +287,4 @@ const Login = () => {
 	)
 }
 
-export default Login
+export default Register
