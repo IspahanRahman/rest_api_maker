@@ -1,4 +1,4 @@
-import Login from "@/pages/auth/Login";
+import Login from "@/components/core-panel/public-panel/auth/Login";
 
 import React from "react";
 

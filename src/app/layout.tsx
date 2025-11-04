@@ -2,6 +2,7 @@
 import './globals.css';
 import { getMessages } from 'next-intl/server';
 import { NextIntlClientProvider } from 'next-intl';
+import { ThemeProvider } from 'next-themes';
 
 export const metadata = {
   title: 'Rest Api Maker',
@@ -17,11 +18,13 @@ export default async function RootLayout({
   const messages = await getMessages();
 
   return (
-    <html lang='en'>
-      <body className="bg-gray-50">
-        <NextIntlClientProvider locale='en' messages={messages}>
-          {children}
-        </NextIntlClientProvider>
+    <html lang='en' suppressHydrationWarning>
+      <body className="bg-background text-foreground">
+        <ThemeProvider attribute='class' defaultTheme='system' enableSystem>
+          <NextIntlClientProvider locale='en' messages={messages}>
+            {children}
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

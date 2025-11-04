@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import UserNavbar from "@/components/layouts/PublicNavbar";
+import UserNavbar from "@/components/core-panel/public-panel/layouts/PublicNavbar";
 
 import { ReactNode } from "react";
 
