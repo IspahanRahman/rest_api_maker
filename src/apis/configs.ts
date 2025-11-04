@@ -1,18 +1,19 @@
 import axios from 'axios'
 import { ApiRequestConfig } from '@/types/config'
 import { LOCAL_STORAGE_KEYS } from '@/config/constants'
+import { env } from '@/config/env'
 
-const API_BASE_URL: string | undefined = process.env.NEXT_PUBLIC_APP_URL || 'https://api.example.com';
-
-
-
-if (!API_BASE_URL) {
-	throw new Error('API_BASE_URL is not defined in .env')
+// Validate environment variables on initialization
+if (!env.apiBaseUrl) {
+	throw new Error(
+		'NEXT_PUBLIC_API_BASE_URL is not defined in .env\n' +
+			'Please check your .env file and ENV_GUIDE.md for setup instructions.'
+	)
 }
 
-
 const AxiosAPI = axios.create({
-	baseURL: API_BASE_URL,
+	baseURL: env.apiBaseUrl,
+	timeout: env.apiTimeout,
 	headers: {
 		Accept: 'application/json',
 		'Content-Type': 'application/json'
