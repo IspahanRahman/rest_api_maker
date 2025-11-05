@@ -7,6 +7,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { FormInput } from '@/components/lib/ui-elements/form/FormInput'
 import { PasswordInput } from '@/components/lib/ui-elements/form/PasswordInput'
 import { LoadingButton } from '@/components/lib/ui-elements/button/LoadingButton'
+import { setAuthCookie } from '@/lib/cookies'
 import { LogIn, Mail, Lock } from 'lucide-react'
 import Link from 'next/link'
 
@@ -35,8 +36,11 @@ const Login = () => {
 
 			const token = result.data.token
 
-			// Store token
+			// Store token in localStorage
 			localStorage.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, token)
+
+			// Store token in cookie for proxy/middleware
+			setAuthCookie(token, rememberMe)
 
 			// Store user profile if available
 			if (result.data.user) {
@@ -46,9 +50,9 @@ const Login = () => {
 				)
 			}
 
-			// Set cookie if remember me is checked
+			// Store remember me preference
 			if (rememberMe) {
-				document.cookie = `auth_token=${token}; path=/; max-age=2592000` // 30 days
+				localStorage.setItem(LOCAL_STORAGE_KEYS.REMEMBER_ME, 'true')
 			}
 
 			toast.success('Login successful! Welcome back.')

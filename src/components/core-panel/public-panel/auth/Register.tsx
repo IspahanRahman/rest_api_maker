@@ -7,8 +7,10 @@ import { useRouter, useParams } from 'next/navigation'
 import { FormInput } from '@/components/lib/ui-elements/form/FormInput'
 import { PasswordInput } from '@/components/lib/ui-elements/form/PasswordInput'
 import { LoadingButton } from '@/components/lib/ui-elements/button/LoadingButton'
+import { setAuthCookie } from '@/lib/cookies'
 import { UserPlus, Mail, User, Lock, CheckCircle2 } from 'lucide-react'
-import Link from 'next/link'
+import Link from 'next/link';
+import Swal from 'sweetalert2';
 
 const Register = () => {
 	const { submit, isLoading, data, errors, setData } = useRegisterMutation()
@@ -55,14 +57,23 @@ const Register = () => {
 			const result = await submit()
 
 			if (!result?.status) {
-				toast.error(result?.message || 'Registration failed')
-				return
+				Swal.fire({
+					icon: 'error',
+					title: 'Registration Failed',
+					text: result?.errors[0]?.message || 'Registration failed',
+				});
+				return;
 			}
 
 			// If registration returns a token (auto-login)
 			if (result?.data?.token) {
 				const token = result.data.token
+
+				// Store token in localStorage
 				localStorage.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, token)
+
+				// Store token in cookie for proxy/middleware
+				setAuthCookie(token, false)
 
 				if (result.data.user) {
 					localStorage.setItem(
