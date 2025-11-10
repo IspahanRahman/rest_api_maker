@@ -8,8 +8,8 @@ import '../globals.css'
 import ToastProvider from '@/providers/ToastProvider'
 
 export const metadata = {
-	title: 'Orbit',
-	description: 'Orbit HRM'
+	title: 'Rest API Maker',
+	description: 'Your app description'
 }
 
 interface LayoutProps {
