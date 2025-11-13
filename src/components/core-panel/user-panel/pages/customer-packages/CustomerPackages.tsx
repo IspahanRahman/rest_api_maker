@@ -18,16 +18,28 @@ import {
 import { cn } from '@/lib/utils'
 import { toast } from 'react-toastify'
 
+interface PackagePlan {
+	id: number;
+	plan_type: string; // 'monthly' | 'yearly' | others
+	duration_days: number;
+	price: number;
+	discount_type?: string; // 'percentage' | 'fixed' | null
+	discount_value?: number;
+	final_price: number;
+	status?: string;
+}
+
 interface PackageType {
 	id: number;
 	name: string;
+	/** fallback/base price if no plans */
 	price: number;
+	base_price: number;
 	duration_days: number;
 	max_projects?: number;
 	max_tables_per_project?: number;
-	// max_rows_per_table: number
-	features?: Record<string, any>
-	// status: 'active' | 'inactive'
+	features?: Record<string, any>;
+	plans: PackagePlan[];
 }
 
 /** ---------- Utils: normalize API ---------- */
@@ -45,27 +57,57 @@ function safeParseFeatures(input: unknown): Record<string, any> | undefined {
 }
 
 function normalizePackages(apiData: any[]): PackageType[] {
-	return (apiData || []).map((p: any) => ({
-		id: Number(p.id),
-		name: String(p.name ?? 'Package'),
-		price: typeof p.price === 'number' ? p.price : parseFloat(p.price ?? '0'),
-		duration_days: Number(p.duration_days ?? 0),
-		max_projects: Number(p.max_projects ?? 0),
-		max_tables_per_project: Number(p.max_tables_per_project ?? 0),
-		features: safeParseFeatures(p.features),
-		// status: p.status === 'inactive' ? 'inactive' : 'active',
-	}))
+	return (apiData || []).map((p: any) => {
+		const plans: PackagePlan[] = Array.isArray(p.PackagePlans)
+			? p.PackagePlans.map((plan: any) => ({
+				id: Number(plan.id),
+				plan_type: String(plan.plan_type ?? ''),
+				duration_days: Number(plan.duration_days ?? 0),
+				price: typeof plan.price === 'number' ? plan.price : parseFloat(plan.price ?? '0'),
+				discount_type: plan.discount_type ?? undefined,
+				discount_value: plan.discount_value != null ? Number(plan.discount_value) : undefined,
+				final_price: typeof plan.final_price === 'number'
+					? plan.final_price
+					: parseFloat(plan.final_price ?? plan.price ?? '0'),
+				status: plan.status,
+			}))
+			: []
+
+		// Default display plan = monthly plan if exists, otherwise first plan
+		const defaultPlan =
+			plans.find(pl => pl.plan_type === 'monthly') ||
+			plans[0]
+
+		const basePrice =
+			typeof p.base_price === 'number'
+				? p.base_price
+				: parseFloat(p.base_price ?? '0')
+
+		return {
+			id: Number(p.id),
+			name: String(p.name ?? 'Package'),
+			price: defaultPlan ? defaultPlan.final_price : basePrice,
+			base_price: basePrice,
+			duration_days: defaultPlan?.duration_days ?? Number(p.duration_days ?? 0),
+			max_projects: Number(p.max_projects ?? 0),
+			max_tables_per_project: Number(p.max_tables_per_project ?? 0),
+			features: safeParseFeatures(p.features),
+			plans,
+		}
+	})
 }
 
 
 export default function CustomerPackages() {
-	const { data: packages, isLoading, error } = usePackages()
+	const { data: packages, isLoading, error } = usePackages();
+	console.log(packages);
 	const [selectedPeriod, setSelectedPeriod] = useState<'monthly' | 'yearly'>('monthly')
 	const [processingId, setProcessingId] = useState<number | null>(null)
 
 	const handlePurchase = async (packageId: number) => {
 		setProcessingId(packageId)
 		try {
+			// TODO: replace with real purchase logic / redirect
 			await new Promise((resolve) => setTimeout(resolve, 1500))
 			toast.success('Package purchase initiated! Redirecting to payment...')
 		} catch (err) {
@@ -206,6 +248,15 @@ export default function CustomerPackages() {
 	const raw = (packages as any)?.data ?? packages ?? []
 	const packageData: PackageType[] = normalizePackages(raw)
 
+	// For the toggle badge: use first yearly plan with percentage discount
+	const yearlyDiscountPlan = packageData
+		.flatMap(pkg => pkg.plans || [])
+		.find(pl => pl.plan_type === 'yearly' && pl.discount_type === 'percentage' && (pl.discount_value ?? 0) > 0)
+
+	const yearlyBadgeText = yearlyDiscountPlan
+		? `Save ${yearlyDiscountPlan.discount_value}%`
+		: 'Best value'
+
 	return (
 		<div className="space-y-8">
 			{/* Header */}
@@ -234,7 +285,11 @@ export default function CustomerPackages() {
 							selectedPeriod === 'yearly' ? 'bg-primary-500 text-white shadow-sm' : 'text-text-secondary hover:text-text-primary-sem')}
 					>
 						Yearly
-						<span className="ml-2 text-xs px-2 py-0.5 bg-success-500 text-white rounded-full">Save 20%</span>
+						{yearlyDiscountPlan && (
+							<span className="ml-2 text-xs px-2 py-0.5 bg-success-500 text-white rounded-full">
+								{yearlyBadgeText}
+							</span>
+						)}
 					</button>
 				</div>
 			</div>
@@ -256,10 +311,23 @@ export default function CustomerPackages() {
 						const isPopular = index === 1
 						const isPurchasing = processingId === pkg.id
 
-						// price display (monthly vs yearly)
-						const monthlyPrice = pkg.price
-						const yearlyPrice = Math.round(monthlyPrice * 12 * 0.8) // 20% off
-						const yearlySave = Math.round(monthlyPrice * 12 * 0.2)
+						const monthlyPlan = pkg.plans.find(pl => pl.plan_type === 'monthly')
+						const yearlyPlan = pkg.plans.find(pl => pl.plan_type === 'yearly')
+
+						const activePlan = selectedPeriod === 'yearly'
+							? (yearlyPlan || monthlyPlan || pkg.plans[0])
+							: (monthlyPlan || yearlyPlan || pkg.plans[0])
+
+						const rawPrice = activePlan?.price ?? activePlan?.final_price ?? pkg.price
+						const finalPrice = activePlan?.final_price ?? rawPrice
+						const durationDays = activePlan?.duration_days ?? pkg.duration_days
+
+						let discountText: string | null = null
+						if (activePlan?.discount_type === 'percentage' && activePlan.discount_value) {
+							discountText = `Save ${activePlan.discount_value}%`
+						} else if (activePlan?.discount_type === 'fixed' && activePlan.discount_value) {
+							discountText = `Save $${activePlan.discount_value}`
+						}
 
 						return (
 							<div
@@ -292,13 +360,20 @@ export default function CustomerPackages() {
 									<div className="mb-6">
 										<div className="flex items-baseline gap-2">
 											<span className="text-4xl font-bold text-text-primary-sem">
-												${selectedPeriod === 'yearly' ? yearlyPrice : monthlyPrice}
+												${finalPrice.toFixed(2)}
 											</span>
-											<span className="text-text-secondary">/{selectedPeriod === 'yearly' ? 'year' : 'month'}</span>
+											<span className="text-text-secondary">
+												/{selectedPeriod === 'yearly' ? 'year' : 'month'}
+											</span>
+											{discountText && rawPrice > finalPrice && (
+												<span className="text-xs text-text-secondary line-through ml-2">
+													${rawPrice.toFixed(2)}
+												</span>
+											)}
 										</div>
-										{selectedPeriod === 'yearly' && (
+										{discountText && (
 											<p className="text-sm text-success-500 font-medium mt-1">
-												Save ${yearlySave} per year
+												{discountText}
 											</p>
 										)}
 									</div>
@@ -336,7 +411,8 @@ export default function CustomerPackages() {
 											</div>
 											<span className="text-sm text-text-secondary">
 												<span className="font-semibold text-text-primary-sem">
-													{/* {pkg.max_tables_per_project} */}10
+													{/* Placeholder until you add max_rows_per_table to API */}
+													10
 												</span>{' '}
 												rows per table
 											</span>
@@ -348,9 +424,9 @@ export default function CustomerPackages() {
 											</div>
 											<span className="text-sm text-text-secondary">
 												<span className="font-semibold text-text-primary-sem">
-													{pkg.duration_days}
+													{durationDays}
 												</span>{' '}
-												{pkg.duration_days === 1 ? 'Day' : 'Days'} access
+												{durationDays === 1 ? 'Day' : 'Days'} access
 											</span>
 										</li>
 
@@ -364,7 +440,9 @@ export default function CustomerPackages() {
 													<span className="font-semibold text-text-primary-sem capitalize">
 														{key.replace(/_/g, ' ')}:
 													</span>{' '}
-													{String(value)}
+													{typeof value === 'boolean'
+														? (value ? 'Included' : 'Not included')
+														: String(value)}
 												</span>
 											</li>
 										))}
@@ -397,6 +475,7 @@ export default function CustomerPackages() {
 												: 'bg-surface-input hover:bg-surface-hover text-text-primary-sem border border-border-subtle',
 											isPurchasing && 'opacity-70 cursor-not-allowed',
 										)}
+										disabled={isPurchasing}
 									>
 										{isPurchasing ? (
 											<>
@@ -432,7 +511,7 @@ export default function CustomerPackages() {
 						<div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30 inline-flex mb-4">
 							<Shield className="w-6 h-6 text-green-600 dark:text-green-400" />
 						</div>
-						<h3 className="text-lg font-semibold text-text-primary-sem mb-2">Secure & Reliable</h3>
+						<h3 className="text-lg font-semibold text-text-primary-sem mb-2">Secure &amp; Reliable</h3>
 						<p className="text-text-secondary">Enterprise-grade security with 99.9% uptime guarantee for your APIs.</p>
 					</div>
 					<div className="p-6 bg-surface-card rounded-xl border border-border-subtle hover:border-primary-500 transition-all">
