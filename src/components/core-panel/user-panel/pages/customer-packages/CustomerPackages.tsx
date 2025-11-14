@@ -18,31 +18,34 @@ import {
 import { cn } from '@/lib/utils'
 import { toast } from 'react-toastify'
 
+/** ---------- Types ---------- */
+type PlanTerm = 'monthly' | 'quarterly' | 'half_yearly' | 'yearly' | 'custom'
+
 interface PackagePlan {
-	id: number;
-	plan_type: string; // 'monthly' | 'yearly' | others
-	duration_days: number;
-	price: number;
-	discount_type?: string; // 'percentage' | 'fixed' | null
-	discount_value?: number;
-	final_price: number;
-	status?: string;
+	id: number
+	plan_type: string // 'monthly' | 'yearly' | others | ''
+	duration_days: number
+	price: number
+	discount_type?: string // 'percentage' | 'fixed' | null
+	discount_value?: number
+	final_price: number
+	status?: string
+	term?: PlanTerm
 }
 
 interface PackageType {
-	id: number;
-	name: string;
-	/** fallback/base price if no plans */
-	price: number;
-	base_price: number;
-	duration_days: number;
-	max_projects?: number;
-	max_tables_per_project?: number;
-	features?: Record<string, any>;
-	plans: PackagePlan[];
+	id: number
+	name: string
+	status?: string
+	sell_count?: number
+	max_projects?: number
+	max_tables_per_project?: number
+	features?: Record<string, any>
+	plans: PackagePlan[]
 }
 
 /** ---------- Utils: normalize API ---------- */
+// features comes as stringified JSON, sometimes double-encoded
 function safeParseFeatures(input: unknown): Record<string, any> | undefined {
 	if (typeof input !== 'string') return undefined
 	try {
@@ -52,43 +55,74 @@ function safeParseFeatures(input: unknown): Record<string, any> | undefined {
 		}
 		return once
 	} catch {
-		try { return JSON.parse(input) } catch { return undefined }
+		try {
+			return JSON.parse(input)
+		} catch {
+			return undefined
+		}
 	}
+}
+
+function derivePlanTerm(plan: {
+	plan_type?: string
+	duration_days?: number
+}): PlanTerm {
+	const t = (plan.plan_type || '').toLowerCase()
+	const days = Number(plan.duration_days || 0)
+
+	if (t === 'monthly') return 'monthly'
+	if (t === 'quarterly' || t === '3_months' || t === '3months') return 'quarterly'
+	if (t === 'half_yearly' || t === '6_months' || t === '6months')
+		return 'half_yearly'
+	if (t === 'yearly' || t === 'annual' || t === 'annually') return 'yearly'
+
+	// Fallback: infer from duration_days
+	if (days >= 25 && days <= 35) return 'monthly'
+	if (days >= 80 && days <= 100) return 'quarterly'
+	if (days >= 170 && days <= 190) return 'half_yearly'
+	if (days >= 350 && days <= 380) return 'yearly'
+
+	return 'custom'
 }
 
 function normalizePackages(apiData: any[]): PackageType[] {
 	return (apiData || []).map((p: any) => {
 		const plans: PackagePlan[] = Array.isArray(p.PackagePlans)
-			? p.PackagePlans.map((plan: any) => ({
-				id: Number(plan.id),
-				plan_type: String(plan.plan_type ?? ''),
-				duration_days: Number(plan.duration_days ?? 0),
-				price: typeof plan.price === 'number' ? plan.price : parseFloat(plan.price ?? '0'),
-				discount_type: plan.discount_type ?? undefined,
-				discount_value: plan.discount_value != null ? Number(plan.discount_value) : undefined,
-				final_price: typeof plan.final_price === 'number'
-					? plan.final_price
-					: parseFloat(plan.final_price ?? plan.price ?? '0'),
-				status: plan.status,
-			}))
+			? p.PackagePlans.map((plan: any) => {
+				const duration = Number(plan.duration_days ?? 0)
+				const price =
+					typeof plan.price === 'number'
+						? plan.price
+						: parseFloat(plan.price ?? '0')
+				const finalPrice =
+					typeof plan.final_price === 'number'
+						? plan.final_price
+						: parseFloat(plan.final_price ?? plan.price ?? '0')
+
+				const basePlan = {
+					id: Number(plan.id),
+					plan_type: String(plan.plan_type ?? ''),
+					duration_days: duration,
+					price,
+					discount_type: plan.discount_type ?? undefined,
+					discount_value:
+						plan.discount_value != null ? Number(plan.discount_value) : undefined,
+					final_price: finalPrice,
+					status: plan.status,
+				}
+
+				return {
+					...basePlan,
+					term: derivePlanTerm(basePlan),
+				}
+			})
 			: []
-
-		// Default display plan = monthly plan if exists, otherwise first plan
-		const defaultPlan =
-			plans.find(pl => pl.plan_type === 'monthly') ||
-			plans[0]
-
-		const basePrice =
-			typeof p.base_price === 'number'
-				? p.base_price
-				: parseFloat(p.base_price ?? '0')
 
 		return {
 			id: Number(p.id),
 			name: String(p.name ?? 'Package'),
-			price: defaultPlan ? defaultPlan.final_price : basePrice,
-			base_price: basePrice,
-			duration_days: defaultPlan?.duration_days ?? Number(p.duration_days ?? 0),
+			status: p.status ? String(p.status) : undefined,
+			sell_count: p.sell_count != null ? Number(p.sell_count) : undefined,
 			max_projects: Number(p.max_projects ?? 0),
 			max_tables_per_project: Number(p.max_tables_per_project ?? 0),
 			features: safeParseFeatures(p.features),
@@ -97,18 +131,18 @@ function normalizePackages(apiData: any[]): PackageType[] {
 	})
 }
 
-
 export default function CustomerPackages() {
-	const { data: packages, isLoading, error } = usePackages();
-	console.log(packages);
-	const [selectedPeriod, setSelectedPeriod] = useState<'monthly' | 'yearly'>('monthly')
+	const { data: packages, isLoading, error } = usePackages()
+	console.log(packages)
+
+	const [selectedTerm, setSelectedTerm] = useState<PlanTerm>('monthly')
 	const [processingId, setProcessingId] = useState<number | null>(null)
 
 	const handlePurchase = async (packageId: number) => {
 		setProcessingId(packageId)
 		try {
 			// TODO: replace with real purchase logic / redirect
-			await new Promise((resolve) => setTimeout(resolve, 1500))
+			await new Promise(resolve => setTimeout(resolve, 1500))
 			toast.success('Package purchase initiated! Redirecting to payment...')
 		} catch (err) {
 			toast.error('Failed to purchase package')
@@ -118,7 +152,20 @@ export default function CustomerPackages() {
 	}
 
 	const getPackageIcon = (index: number) => {
-		const icons = [Package, Zap, Crown, Rocket, Sparkles, Star, Shield, TrendingUp, Check, Clock, X, ArrowRight]
+		const icons = [
+			Package,
+			Zap,
+			Crown,
+			Rocket,
+			Sparkles,
+			Star,
+			Shield,
+			TrendingUp,
+			Check,
+			Clock,
+			X,
+			ArrowRight,
+		]
 		return icons[index % icons.length]
 	}
 
@@ -220,7 +267,9 @@ export default function CustomerPackages() {
 					<div className="h-6 bg-surface-card rounded w-1/2" />
 				</div>
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-					{[1, 2, 3].map(i => <div key={i} className="h-96 bg-surface-card rounded-2xl animate-pulse" />)}
+					{[1, 2, 3].map(i => (
+						<div key={i} className="h-96 bg-surface-card rounded-2xl animate-pulse" />
+					))}
 				</div>
 			</div>
 		)
@@ -232,7 +281,9 @@ export default function CustomerPackages() {
 				<div className="p-4 rounded-full bg-error-100 dark:bg-error-900/30 mb-4">
 					<X className="w-12 h-12 text-error-500" />
 				</div>
-				<h2 className="text-2xl font-bold text-text-primary-sem mb-2">Failed to Load Packages</h2>
+				<h2 className="text-2xl font-bold text-text-primary-sem mb-2">
+					Failed to Load Packages
+				</h2>
 				<p className="text-text-secondary mb-6">Please try again later</p>
 				<button
 					onClick={() => window.location.reload()}
@@ -248,14 +299,20 @@ export default function CustomerPackages() {
 	const raw = (packages as any)?.data ?? packages ?? []
 	const packageData: PackageType[] = normalizePackages(raw)
 
-	// For the toggle badge: use first yearly plan with percentage discount
-	const yearlyDiscountPlan = packageData
-		.flatMap(pkg => pkg.plans || [])
-		.find(pl => pl.plan_type === 'yearly' && pl.discount_type === 'percentage' && (pl.discount_value ?? 0) > 0)
+	const allTerms: PlanTerm[] = ['monthly', 'quarterly', 'half_yearly', 'yearly']
+	const availableTerms: PlanTerm[] = allTerms.filter(term =>
+		packageData.some(pkg => pkg.plans.some(pl => pl.term === term)),
+	)
 
-	const yearlyBadgeText = yearlyDiscountPlan
-		? `Save ${yearlyDiscountPlan.discount_value}%`
-		: 'Best value'
+	// label for /month, /3 months, /6 months, /year
+	const unitLabel =
+		selectedTerm === 'monthly'
+			? 'month'
+			: selectedTerm === 'quarterly'
+				? '3 months'
+				: selectedTerm === 'half_yearly'
+					? '6 months'
+					: 'year'
 
 	return (
 		<div className="space-y-8">
@@ -265,32 +322,43 @@ export default function CustomerPackages() {
 					<Sparkles className="w-4 h-4" />
 					Pricing Plans
 				</div>
-				<h1 className="text-4xl md:text-5xl font-bold text-text-primary-sem mb-4">Choose Your Perfect Plan</h1>
-				<p className="text-lg text-text-secondary">Select the package that best fits your needs. Upgrade or downgrade anytime.</p>
+				<h1 className="text-4xl md:text-5xl font-bold text-text-primary-sem mb-4">
+					Choose Your Perfect Plan
+				</h1>
+				<p className="text-lg text-text-secondary">
+					Select the package that best fits your needs. Upgrade or downgrade
+					anytime.
+				</p>
 			</div>
 
-			{/* Period Toggle */}
+			{/* Period / Term Toggle */}
 			<div className="flex justify-center">
 				<div className="inline-flex items-center gap-2 p-1 bg-surface-card rounded-lg border border-border-subtle">
-					<button
-						onClick={() => setSelectedPeriod('monthly')}
-						className={cn('px-6 py-2 rounded-md text-sm font-medium transition-all',
-							selectedPeriod === 'monthly' ? 'bg-primary-500 text-white shadow-sm' : 'text-text-secondary hover:text-text-primary-sem')}
-					>
-						Monthly
-					</button>
-					<button
-						onClick={() => setSelectedPeriod('yearly')}
-						className={cn('px-6 py-2 rounded-md text-sm font-medium transition-all',
-							selectedPeriod === 'yearly' ? 'bg-primary-500 text-white shadow-sm' : 'text-text-secondary hover:text-text-primary-sem')}
-					>
-						Yearly
-						{yearlyDiscountPlan && (
-							<span className="ml-2 text-xs px-2 py-0.5 bg-success-500 text-white rounded-full">
-								{yearlyBadgeText}
-							</span>
-						)}
-					</button>
+					{availableTerms.map(term => {
+						const label =
+							term === 'monthly'
+								? 'Monthly'
+								: term === 'quarterly'
+									? 'Quarterly'
+									: term === 'half_yearly'
+										? 'Half-Yearly'
+										: 'Yearly'
+
+						return (
+							<button
+								key={term}
+								onClick={() => setSelectedTerm(term)}
+								className={cn(
+									'px-4 py-2 rounded-md text-sm font-medium transition-all',
+									selectedTerm === term
+										? 'bg-primary-500 text-white shadow-sm'
+										: 'text-text-secondary hover:text-text-primary-sem',
+								)}
+							>
+								{label}
+							</button>
+						)
+					})}
 				</div>
 			</div>
 
@@ -300,7 +368,9 @@ export default function CustomerPackages() {
 					<div className="p-4 rounded-full bg-surface-card mb-4">
 						<Package className="w-12 h-12 text-text-secondary opacity-50" />
 					</div>
-					<h2 className="text-xl font-semibold text-text-primary-sem mb-2">No Packages Available</h2>
+					<h2 className="text-xl font-semibold text-text-primary-sem mb-2">
+						No Packages Available
+					</h2>
 					<p className="text-text-secondary">Check back later for new packages</p>
 				</div>
 			) : (
@@ -311,21 +381,40 @@ export default function CustomerPackages() {
 						const isPopular = index === 1
 						const isPurchasing = processingId === pkg.id
 
-						const monthlyPlan = pkg.plans.find(pl => pl.plan_type === 'monthly')
-						const yearlyPlan = pkg.plans.find(pl => pl.plan_type === 'yearly')
+						// find plan by selectedTerm
+						const planByTerm = pkg.plans.find(pl => pl.term === selectedTerm)
 
-						const activePlan = selectedPeriod === 'yearly'
-							? (yearlyPlan || monthlyPlan || pkg.plans[0])
-							: (monthlyPlan || yearlyPlan || pkg.plans[0])
+						// useful fallbacks
+						const monthlyPlan = pkg.plans.find(pl => pl.term === 'monthly')
+						const yearlyPlan = pkg.plans.find(pl => pl.term === 'yearly')
+						const fallbackPlan = pkg.plans[0]
 
-						const rawPrice = activePlan?.price ?? activePlan?.final_price ?? pkg.price
-						const finalPrice = activePlan?.final_price ?? rawPrice
-						const durationDays = activePlan?.duration_days ?? pkg.duration_days
+						// priority: selectedTerm -> monthly -> yearly -> first
+						const activePlan = planByTerm || monthlyPlan || yearlyPlan || fallbackPlan
+
+						const rawPrice =
+							activePlan?.price ??
+							activePlan?.final_price ??
+							fallbackPlan?.price ??
+							fallbackPlan?.final_price ??
+							0
+
+						const finalPrice =
+							activePlan?.final_price ?? activePlan?.price ?? 0
+
+						const durationDays =
+							activePlan?.duration_days ?? fallbackPlan?.duration_days ?? 0
 
 						let discountText: string | null = null
-						if (activePlan?.discount_type === 'percentage' && activePlan.discount_value) {
+						if (
+							activePlan?.discount_type === 'percentage' &&
+							activePlan.discount_value
+						) {
 							discountText = `Save ${activePlan.discount_value}%`
-						} else if (activePlan?.discount_type === 'fixed' && activePlan.discount_value) {
+						} else if (
+							activePlan?.discount_type === 'fixed' &&
+							activePlan.discount_value
+						) {
 							discountText = `Save $${activePlan.discount_value}`
 						}
 
@@ -334,14 +423,18 @@ export default function CustomerPackages() {
 								key={pkg.id}
 								className={cn(
 									'relative bg-surface-card rounded-2xl border-2 transition-all duration-300 hover:shadow-xl hover:-translate-y-1',
-									isPopular ? `${colors.border} shadow-lg` : 'border-border-subtle hover:border-primary-500'
+									isPopular
+										? `${colors.border} shadow-lg`
+										: 'border-border-subtle hover:border-primary-500',
 								)}
 							>
 								{isPopular && (
-									<div className={cn(
-										'absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-linear-to-r text-white text-sm font-semibold rounded-full shadow-lg flex items-center gap-1',
-										colors.gradient
-									)}>
+									<div
+										className={cn(
+											'absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-linear-to-r text-white text-sm font-semibold rounded-full shadow-lg flex items-center gap-1',
+											colors.gradient,
+										)}
+									>
 										<Star className="w-4 h-4 fill-current" />
 										Most Popular
 									</div>
@@ -353,8 +446,32 @@ export default function CustomerPackages() {
 										<IconComponent className={cn('w-6 h-6', colors.text)} />
 									</div>
 
-									{/* Name */}
-									<h3 className="text-2xl font-bold text-text-primary-sem mb-2">{pkg.name}</h3>
+									{/* Name + status */}
+									<div className="flex items-center justify-between gap-2 mb-2">
+										<h3 className="text-2xl font-bold text-text-primary-sem">
+											{pkg.name}
+										</h3>
+										{pkg.status && (
+											<span
+												className={cn(
+													'text-xs px-2 py-1 rounded-full border',
+													pkg.status === 'active'
+														? 'bg-success-50 text-success-600 border-success-200 dark:bg-success-900/20 dark:text-success-300 dark:border-success-700/60'
+														: 'bg-surface-card text-text-secondary border-border-subtle',
+												)}
+											>
+												{pkg.status}
+											</span>
+										)}
+									</div>
+
+									{/* Optional sell count */}
+									{typeof pkg.sell_count === 'number' && (
+										<p className="text-xs text-text-secondary mb-2">
+											{pkg.sell_count} user
+											{pkg.sell_count === 1 ? '' : 's'} already purchased
+										</p>
+									)}
 
 									{/* Price */}
 									<div className="mb-6">
@@ -362,9 +479,7 @@ export default function CustomerPackages() {
 											<span className="text-4xl font-bold text-text-primary-sem">
 												${finalPrice.toFixed(2)}
 											</span>
-											<span className="text-text-secondary">
-												/{selectedPeriod === 'yearly' ? 'year' : 'month'}
-											</span>
+											<span className="text-text-secondary">/{unitLabel}</span>
 											{discountText && rawPrice > finalPrice && (
 												<span className="text-xs text-text-secondary line-through ml-2">
 													${rawPrice.toFixed(2)}
@@ -431,21 +546,24 @@ export default function CustomerPackages() {
 										</li>
 
 										{/* Dynamic Features from JSON */}
-										{pkg.features && Object.entries(pkg.features).map(([key, value]) => (
-											<li key={key} className="flex items-start gap-3">
-												<div className="p-0.5 rounded-full bg-success-100 dark:bg-success-900/30 mt-0.5 shrink-0">
-													<Check className="w-4 h-4 text-success-600 dark:text-success-400" />
-												</div>
-												<span className="text-sm text-text-secondary">
-													<span className="font-semibold text-text-primary-sem capitalize">
-														{key.replace(/_/g, ' ')}:
-													</span>{' '}
-													{typeof value === 'boolean'
-														? (value ? 'Included' : 'Not included')
-														: String(value)}
-												</span>
-											</li>
-										))}
+										{pkg.features &&
+											Object.entries(pkg.features).map(([key, value]) => (
+												<li key={key} className="flex items-start gap-3">
+													<div className="p-0.5 rounded-full bg-success-100 dark:bg-success-900/30 mt-0.5 shrink-0">
+														<Check className="w-4 h-4 text-success-600 dark:text-success-400" />
+													</div>
+													<span className="text-sm text-text-secondary">
+														<span className="font-semibold text-text-primary-sem capitalize">
+															{key.replace(/_/g, ' ')}:
+														</span>{' '}
+														{typeof value === 'boolean'
+															? value
+																? 'Included'
+																: 'Not included'
+															: String(value)}
+													</span>
+												</li>
+											))}
 
 										{/* Default features if no custom features */}
 										{(!pkg.features || Object.keys(pkg.features).length === 0) && (
@@ -454,13 +572,17 @@ export default function CustomerPackages() {
 													<div className="p-0.5 rounded-full bg-success-100 dark:bg-success-900/30 mt-0.5 shrink-0">
 														<Check className="w-4 h-4 text-success-600 dark:text-success-400" />
 													</div>
-													<span className="text-sm text-text-secondary">24/7 Support</span>
+													<span className="text-sm text-text-secondary">
+														24/7 Support
+													</span>
 												</li>
 												<li className="flex items-start gap-3">
 													<div className="p-0.5 rounded-full bg-success-100 dark:bg-success-900/30 mt-0.5 shrink-0">
 														<Check className="w-4 h-4 text-success-600 dark:text-success-400" />
 													</div>
-													<span className="text-sm text-text-secondary">API Documentation</span>
+													<span className="text-sm text-text-secondary">
+														API Documentation
+													</span>
 												</li>
 											</>
 										)}
@@ -471,7 +593,8 @@ export default function CustomerPackages() {
 										onClick={() => handlePurchase(pkg.id)}
 										className={cn(
 											'w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2',
-											isPopular ? `${colors.button} text-white shadow-md hover:shadow-lg`
+											isPopular
+												? `${colors.button} text-white shadow-md hover:shadow-lg`
 												: 'bg-surface-input hover:bg-surface-hover text-text-primary-sem border border-border-subtle',
 											isPurchasing && 'opacity-70 cursor-not-allowed',
 										)}
@@ -479,7 +602,7 @@ export default function CustomerPackages() {
 									>
 										{isPurchasing ? (
 											<>
-												<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+												<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
 												Processing...
 											</>
 										) : (
@@ -498,35 +621,55 @@ export default function CustomerPackages() {
 
 			{/* Extra sections unchanged ... */}
 			<div className="mt-16">
-				<h2 className="text-3xl font-bold text-text-primary-sem text-center mb-8">Why Choose Our Packages?</h2>
+				<h2 className="text-3xl font-bold text-text-primary-sem text-center mb-8">
+					Why Choose Our Packages?
+				</h2>
 				<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 					<div className="p-6 bg-surface-card rounded-xl border border-border-subtle hover:border-primary-500 transition-all">
 						<div className="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 inline-flex mb-4">
 							<TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
 						</div>
-						<h3 className="text-lg font-semibold text-text-primary-sem mb-2">Scalable Solutions</h3>
-						<p className="text-text-secondary">Grow your projects seamlessly with our flexible table and row limits.</p>
+						<h3 className="text-lg font-semibold text-text-primary-sem mb-2">
+							Scalable Solutions
+						</h3>
+						<p className="text-text-secondary">
+							Grow your projects seamlessly with our flexible table and row
+							limits.
+						</p>
 					</div>
 					<div className="p-6 bg-surface-card rounded-xl border border-border-subtle hover:border-primary-500 transition-all">
 						<div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30 inline-flex mb-4">
 							<Shield className="w-6 h-6 text-green-600 dark:text-green-400" />
 						</div>
-						<h3 className="text-lg font-semibold text-text-primary-sem mb-2">Secure &amp; Reliable</h3>
-						<p className="text-text-secondary">Enterprise-grade security with 99.9% uptime guarantee for your APIs.</p>
+						<h3 className="text-lg font-semibold text-text-primary-sem mb-2">
+							Secure &amp; Reliable
+						</h3>
+						<p className="text-text-secondary">
+							Enterprise-grade security with 99.9% uptime guarantee for your
+							APIs.
+						</p>
 					</div>
 					<div className="p-6 bg-surface-card rounded-xl border border-border-subtle hover:border-primary-500 transition-all">
 						<div className="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30 inline-flex mb-4">
 							<Clock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
 						</div>
-						<h3 className="text-lg font-semibold text-text-primary-sem mb-2">Quick Setup</h3>
-						<p className="text-text-secondary">Get your REST API up and running in minutes, not hours or days.</p>
+						<h3 className="text-lg font-semibold text-text-primary-sem mb-2">
+							Quick Setup
+						</h3>
+						<p className="text-text-secondary">
+							Get your REST API up and running in minutes, not hours or days.
+						</p>
 					</div>
 				</div>
 			</div>
 
 			<div className="mt-16 text-center">
-				<h2 className="text-2xl font-bold text-text-primary-sem mb-4">Still have questions?</h2>
-				<p className="text-text-secondary mb-6">Our support team is here to help you choose the right package</p>
+				<h2 className="text-2xl font-bold text-text-primary-sem mb-4">
+					Still have questions?
+				</h2>
+				<p className="text-text-secondary mb-6">
+					Our support team is here to help you choose the right package
+				</p>
 				<button className="px-8 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-semibold">
 					Contact Support
 				</button>
