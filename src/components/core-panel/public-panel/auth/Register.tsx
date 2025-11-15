@@ -221,7 +221,7 @@ const Register = () => {
 							type="submit"
 							isLoading={isLoading}
 							loadingText="Creating account..."
-							className="w-full"
+							className="w-full cursor-pointer"
 							size="lg"
 							disabled={!agreedToTerms}
 						>
