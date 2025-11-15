@@ -9,7 +9,8 @@ import { PasswordInput } from '@/components/lib/ui-elements/form/PasswordInput'
 import { LoadingButton } from '@/components/lib/ui-elements/button/LoadingButton'
 import { setAuthCookie } from '@/lib/cookies'
 import { LogIn, Mail, Lock } from 'lucide-react'
-import Link from 'next/link'
+import Link from 'next/link';
+import Swal from 'sweetalert2';
 
 const Login = () => {
 	const { submit, isLoading, data, errors, setData } = useLoginMutation()
@@ -30,8 +31,12 @@ const Login = () => {
 			const result = await submit()
 
 			if (!result?.status || !result?.data?.token) {
-				toast.error(result?.message || 'Login failed')
-				return
+				Swal.fire({
+					icon: 'error',
+					title: 'Login Failed',
+					text: result?.message || 'Login failed',
+				});
+				return;
 			}
 
 			const token = result.data.token
@@ -137,7 +142,7 @@ const Login = () => {
 							type="submit"
 							isLoading={isLoading}
 							loadingText="Signing in..."
-							className="w-full"
+							className="w-full cursor-pointer"
 							size="lg"
 						>
 							<Mail className="w-5 h-5" />

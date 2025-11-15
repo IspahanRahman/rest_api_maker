@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { usePackages } from '@/apis/query/customerPackages/useCustomerPackages'
 import {
 	Package,
@@ -16,33 +16,12 @@ import {
 	Clock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { toast } from 'react-toastify'
-
-/** ---------- Types ---------- */
-type PlanTerm = 'monthly' | 'quarterly' | 'half_yearly' | 'yearly' | 'custom'
-
-interface PackagePlan {
-	id: number
-	plan_type: string // 'monthly' | 'yearly' | others | ''
-	duration_days: number
-	price: number
-	discount_type?: string // 'percentage' | 'fixed' | null
-	discount_value?: number
-	final_price: number
-	status?: string
-	term?: PlanTerm
-}
-
-interface PackageType {
-	id: number
-	name: string
-	status?: string
-	sell_count?: number
-	max_projects?: number
-	max_tables_per_project?: number
-	features?: Record<string, any>
-	plans: PackagePlan[]
-}
+import { toast } from 'react-toastify';
+import { PlanTerm, PackagePlan, PackageType } from '@/types/customer-package';
+import { useBuyPackageMutation } from '@/apis/mutation/customerPackage/useBuyPackageMutation';
+import Modal from '@/components/common/Modal';
+import Swal from 'sweetalert2';
+import { mutate } from 'swr'
 
 /** ---------- Utils: normalize API ---------- */
 // features comes as stringified JSON, sometimes double-encoded
@@ -132,19 +111,50 @@ function normalizePackages(apiData: any[]): PackageType[] {
 }
 
 export default function CustomerPackages() {
-	const { data: packages, isLoading, error } = usePackages()
-	console.log(packages)
+	const { data: packages, isLoading, error, mutate } = usePackages()
 
 	const [selectedTerm, setSelectedTerm] = useState<PlanTerm>('monthly')
+	// will hold the *plan* id that is being purchased
 	const [processingId, setProcessingId] = useState<number | null>(null)
+	const [buyPlanId, setBuyPlanId] = useState<number | null>(null)
 
-	const handlePurchase = async (packageId: number) => {
-		setProcessingId(packageId)
+	const {
+		submit,
+		data,
+		setData,
+		isLoading: isBuying,
+	} = useBuyPackageMutation();
+	// NEW: confirmation modal data
+	type ConfirmData = {
+		planId: number
+		packageName: string
+		price: number
+		unitLabel: string
+	} | null
+
+	const [confirmData, setConfirmData] = useState<ConfirmData>(null);
+
+	const handlePurchase = async (planId?: number) => {
+		if (!planId) {
+			toast.error('No valid plan found for this package')
+			return
+		}
 		try {
-			// TODO: replace with real purchase logic / redirect
-			await new Promise(resolve => setTimeout(resolve, 1500))
-			toast.success('Package purchase initiated! Redirecting to payment...')
+			setProcessingId(planId)
+			data.package_plan_id = planId;
+			const result = await submit();
+			if (!result?.status) {
+				Swal.fire({
+					icon: 'error',
+					title: 'Purchase Failed',
+					text: result?.message || 'Failed to purchase package',
+				});
+				return;
+			}
+			toast.success('Package purchased successfully!');
+			mutate();
 		} catch (err) {
+			console.error(err)
 			toast.error('Failed to purchase package')
 		} finally {
 			setProcessingId(null)
@@ -304,6 +314,14 @@ export default function CustomerPackages() {
 		packageData.some(pkg => pkg.plans.some(pl => pl.term === term)),
 	)
 
+	// find package with max sell_count
+	const maxSellCount = packageData.reduce(
+		(max, pkg) => Math.max(max, pkg.sell_count ?? 0),
+		0,
+	)
+	const popularPackageId =
+		packageData.find(pkg => (pkg.sell_count ?? 0) === maxSellCount)?.id ?? null
+
 	// label for /month, /3 months, /6 months, /year
 	const unitLabel =
 		selectedTerm === 'monthly'
@@ -315,365 +333,434 @@ export default function CustomerPackages() {
 					: 'year'
 
 	return (
-		<div className="space-y-8">
-			{/* Header */}
-			<div className="text-center max-w-3xl mx-auto">
-				<div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-sm font-medium mb-4">
-					<Sparkles className="w-4 h-4" />
-					Pricing Plans
-				</div>
-				<h1 className="text-4xl md:text-5xl font-bold text-text-primary-sem mb-4">
-					Choose Your Perfect Plan
-				</h1>
-				<p className="text-lg text-text-secondary">
-					Select the package that best fits your needs. Upgrade or downgrade
-					anytime.
-				</p>
-			</div>
-
-			{/* Period / Term Toggle */}
-			<div className="flex justify-center">
-				<div className="inline-flex items-center gap-2 p-1 bg-surface-card rounded-lg border border-border-subtle">
-					{availableTerms.map(term => {
-						const label =
-							term === 'monthly'
-								? 'Monthly'
-								: term === 'quarterly'
-									? 'Quarterly'
-									: term === 'half_yearly'
-										? 'Half-Yearly'
-										: 'Yearly'
-
-						return (
-							<button
-								key={term}
-								onClick={() => setSelectedTerm(term)}
-								className={cn(
-									'px-4 py-2 rounded-md text-sm font-medium transition-all',
-									selectedTerm === term
-										? 'bg-primary-500 text-white shadow-sm'
-										: 'text-text-secondary hover:text-text-primary-sem',
-								)}
-							>
-								{label}
-							</button>
-						)
-					})}
-				</div>
-			</div>
-
-			{/* Packages Grid */}
-			{packageData.length === 0 ? (
-				<div className="flex flex-col items-center justify-center min-h-[40vh]">
-					<div className="p-4 rounded-full bg-surface-card mb-4">
-						<Package className="w-12 h-12 text-text-secondary opacity-50" />
+		<>
+			<div className="space-y-8">
+				{/* Header */}
+				<div className="text-center max-w-3xl mx-auto">
+					<div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-sm font-medium mb-4">
+						<Sparkles className="w-4 h-4" />
+						Pricing Plans
 					</div>
-					<h2 className="text-xl font-semibold text-text-primary-sem mb-2">
-						No Packages Available
-					</h2>
-					<p className="text-text-secondary">Check back later for new packages</p>
+					<h1 className="text-4xl md:text-5xl font-bold text-text-primary-sem mb-4">
+						Choose Your Perfect Plan
+					</h1>
+					<p className="text-lg text-text-secondary">
+						Select the package that best fits your needs. Upgrade or downgrade
+						anytime.
+					</p>
 				</div>
-			) : (
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-					{packageData.map((pkg, index) => {
-						const IconComponent = getPackageIcon(index)
-						const colors = getPackageColor(index)
-						const isPopular = index === 1
-						const isPurchasing = processingId === pkg.id
 
-						// find plan by selectedTerm
-						const planByTerm = pkg.plans.find(pl => pl.term === selectedTerm)
+				{/* Period / Term Toggle */}
+				<div className="flex justify-center">
+					<div className="inline-flex items-center gap-2 p-1 bg-surface-card rounded-lg border border-border-subtle">
+						{availableTerms.map(term => {
+							const label =
+								term === 'monthly'
+									? 'Monthly'
+									: term === 'quarterly'
+										? 'Quarterly'
+										: term === 'half_yearly'
+											? 'Half-Yearly'
+											: 'Yearly'
 
-						// useful fallbacks
-						const monthlyPlan = pkg.plans.find(pl => pl.term === 'monthly')
-						const yearlyPlan = pkg.plans.find(pl => pl.term === 'yearly')
-						const fallbackPlan = pkg.plans[0]
+							return (
+								<button
+									key={term}
+									onClick={() => setSelectedTerm(term)}
+									className={cn(
+										'px-4 py-2 rounded-md text-sm font-medium transition-all',
+										selectedTerm === term
+											? 'bg-primary-500 text-white shadow-sm'
+											: 'text-text-secondary hover:text-text-primary-sem',
+									)}
+								>
+									{label}
+								</button>
+							)
+						})}
+					</div>
+				</div>
 
-						// priority: selectedTerm -> monthly -> yearly -> first
-						const activePlan = planByTerm || monthlyPlan || yearlyPlan || fallbackPlan
+				{/* Packages Grid */}
+				{packageData.length === 0 ? (
+					<div className="flex flex-col items-center justify-center min-h-[40vh]">
+						<div className="p-4 rounded-full bg-surface-card mb-4">
+							<Package className="w-12 h-12 text-text-secondary opacity-50" />
+						</div>
+						<h2 className="text-xl font-semibold text-text-primary-sem mb-2">
+							No Packages Available
+						</h2>
+						<p className="text-text-secondary">Check back later for new packages</p>
+					</div>
+				) : (
+					<div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
+						{packageData.map((pkg, index) => {
+							const IconComponent = getPackageIcon(index)
+							const colors = getPackageColor(index)
+							const isPopular = popularPackageId != null && pkg.id === popularPackageId
 
-						const rawPrice =
-							activePlan?.price ??
-							activePlan?.final_price ??
-							fallbackPlan?.price ??
-							fallbackPlan?.final_price ??
-							0
+							// find plan by selectedTerm
+							const planByTerm = pkg.plans.find(pl => pl.term === selectedTerm)
 
-						const finalPrice =
-							activePlan?.final_price ?? activePlan?.price ?? 0
+							// useful fallbacks
+							const monthlyPlan = pkg.plans.find(pl => pl.term === 'monthly')
+							const yearlyPlan = pkg.plans.find(pl => pl.term === 'yearly')
+							const fallbackPlan = pkg.plans[0]
 
-						const durationDays =
-							activePlan?.duration_days ?? fallbackPlan?.duration_days ?? 0
+							// priority: selectedTerm -> monthly -> yearly -> first
+							const activePlan = planByTerm || monthlyPlan || yearlyPlan || fallbackPlan
 
-						let discountText: string | null = null
-						if (
-							activePlan?.discount_type === 'percentage' &&
-							activePlan.discount_value
-						) {
-							discountText = `Save ${activePlan.discount_value}%`
-						} else if (
-							activePlan?.discount_type === 'fixed' &&
-							activePlan.discount_value
-						) {
-							discountText = `Save $${activePlan.discount_value}`
-						}
+							const rawPrice =
+								activePlan?.price ??
+								activePlan?.final_price ??
+								fallbackPlan?.price ??
+								fallbackPlan?.final_price ??
+								0
 
-						return (
-							<div
-								key={pkg.id}
-								className={cn(
-									'relative bg-surface-card rounded-2xl border-2 transition-all duration-300 hover:shadow-xl hover:-translate-y-1',
-									isPopular
-										? `${colors.border} shadow-lg`
-										: 'border-border-subtle hover:border-primary-500',
-								)}
-							>
-								{isPopular && (
-									<div
-										className={cn(
-											'absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-linear-to-r text-white text-sm font-semibold rounded-full shadow-lg flex items-center gap-1',
-											colors.gradient,
-										)}
-									>
-										<Star className="w-4 h-4 fill-current" />
-										Most Popular
-									</div>
-								)}
+							const finalPrice =
+								activePlan?.final_price ?? activePlan?.price ?? 0
 
-								<div className="p-6 md:p-8">
-									{/* Icon */}
-									<div className={cn('inline-flex p-3 rounded-xl mb-4', colors.bg)}>
-										<IconComponent className={cn('w-6 h-6', colors.text)} />
-									</div>
+							const durationDays =
+								activePlan?.duration_days ?? fallbackPlan?.duration_days ?? 0
 
-									{/* Name + status */}
-									<div className="flex items-center justify-between gap-2 mb-2">
-										<h3 className="text-2xl font-bold text-text-primary-sem">
-											{pkg.name}
-										</h3>
-										{pkg.status && (
-											<span
-												className={cn(
-													'text-xs px-2 py-1 rounded-full border',
-													pkg.status === 'active'
-														? 'bg-success-50 text-success-600 border-success-200 dark:bg-success-900/20 dark:text-success-300 dark:border-success-700/60'
-														: 'bg-surface-card text-text-secondary border-border-subtle',
-												)}
-											>
-												{pkg.status}
-											</span>
-										)}
-									</div>
+							let discountText: string | null = null
+							if (
+								activePlan?.discount_type === 'percentage' &&
+								activePlan.discount_value
+							) {
+								discountText = `Save ${activePlan.discount_value}%`
+							} else if (
+								activePlan?.discount_type === 'fixed' &&
+								activePlan.discount_value
+							) {
+								discountText = `Save $${activePlan.discount_value}`
+							}
 
-									{/* Optional sell count */}
-									{typeof pkg.sell_count === 'number' && (
-										<p className="text-xs text-text-secondary mb-2">
-											{pkg.sell_count} user
-											{pkg.sell_count === 1 ? '' : 's'} already purchased
-										</p>
+							const isPurchasing = processingId === activePlan?.id
+
+							return (
+								<div
+									key={pkg.id}
+									className={cn(
+										'relative bg-surface-card rounded-2xl border-2 transition-all duration-300 hover:shadow-xl hover:-translate-y-1',
+										isPopular
+											? `${colors.border} shadow-lg`
+											: 'border-border-subtle hover:border-primary-500',
+									)}
+								>
+									{isPopular && (
+										<div
+											className={cn(
+												'absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-linear-to-r text-white text-sm font-semibold rounded-full shadow-lg flex items-center gap-1',
+												colors.gradient,
+											)}
+										>
+											<Star className="w-4 h-4 fill-current" />
+											Most Popular
+										</div>
 									)}
 
-									{/* Price */}
-									<div className="mb-6">
-										<div className="flex items-baseline gap-2">
-											<span className="text-4xl font-bold text-text-primary-sem">
-												${finalPrice.toFixed(2)}
-											</span>
-											<span className="text-text-secondary">/{unitLabel}</span>
-											{discountText && rawPrice > finalPrice && (
-												<span className="text-xs text-text-secondary line-through ml-2">
-													${rawPrice.toFixed(2)}
+									<div className="p-6 md:p-8">
+										{/* Icon */}
+										<div className={cn('inline-flex p-3 rounded-xl mb-4', colors.bg)}>
+											<IconComponent className={cn('w-6 h-6', colors.text)} />
+										</div>
+
+										{/* Name + status */}
+										<div className="flex items-center justify-between gap-2 mb-2">
+											<h3 className="text-2xl font-bold text-text-primary-sem">
+												{pkg.name}
+											</h3>
+											{pkg.status && (
+												<span
+													className={cn(
+														'text-xs px-2 py-1 rounded-full border',
+														pkg.status === 'active'
+															? 'bg-success-50 text-success-600 border-success-200 dark:bg-success-900/20 dark:text-success-300 dark:border-success-700/60'
+															: 'bg-surface-card text-text-secondary border-border-subtle',
+													)}
+												>
+													{pkg.status}
 												</span>
 											)}
 										</div>
-										{discountText && (
-											<p className="text-sm text-success-500 font-medium mt-1">
-												{discountText}
+
+										{/* Optional sell count */}
+										{typeof pkg.sell_count === 'number' && (
+											<p className="text-xs text-text-secondary mb-2">
+												{pkg.sell_count} user
+												{pkg.sell_count === 1 ? '' : 's'} already purchased
 											</p>
 										)}
+
+										{/* Price */}
+										<div className="mb-6">
+											<div className="flex items-baseline gap-2">
+												<span className="text-4xl font-bold text-text-primary-sem">
+													${finalPrice.toFixed(2)}
+												</span>
+												<span className="text-text-secondary">/{unitLabel}</span>
+												{discountText && rawPrice > finalPrice && (
+													<span className="text-xs text-text-secondary line-through ml-2">
+														${rawPrice.toFixed(2)}
+													</span>
+												)}
+											</div>
+											{discountText && (
+												<p className="text-sm text-success-500 font-medium mt-1">
+													{discountText}
+												</p>
+											)}
+										</div>
+
+										{/* Features */}
+										<ul className="space-y-3 mb-8">
+											{/* Standard Features */}
+											<li className="flex items-start gap-3">
+												<div className="p-0.5 rounded-full bg-success-100 dark:bg-success-900/30 mt-0.5 shrink-0">
+													<Check className="w-4 h-4 text-success-600 dark:text-success-400" />
+												</div>
+												<span className="text-sm text-text-secondary">
+													<span className="font-semibold text-text-primary-sem">
+														{pkg.max_projects}
+													</span>{' '}
+													{pkg.max_projects === 1 ? 'Project' : 'Projects'}
+												</span>
+											</li>
+
+											<li className="flex items-start gap-3">
+												<div className="p-0.5 rounded-full bg-success-100 dark:bg-success-900/30 mt-0.5 shrink-0">
+													<Check className="w-4 h-4 text-success-600 dark:text-success-400" />
+												</div>
+												<span className="text-sm text-text-secondary">
+													<span className="font-semibold text-text-primary-sem">
+														{pkg.max_tables_per_project}
+													</span>{' '}
+													Tables per project
+												</span>
+											</li>
+
+											<li className="flex items-start gap-3">
+												<div className="p-0.5 rounded-full bg-success-100 dark:bg-success-900/30 mt-0.5 shrink-0">
+													<Check className="w-4 h-4 text-success-600 dark:text-success-400" />
+												</div>
+												<span className="text-sm text-text-secondary">
+													<span className="font-semibold text-text-primary-sem">
+														{/* Placeholder until you add max_rows_per_table to API */}
+														10
+													</span>{' '}
+													rows per table
+												</span>
+											</li>
+
+											<li className="flex items-start gap-3">
+												<div className="p-0.5 rounded-full bg-success-100 dark:bg-success-900/30 mt-0.5 shrink-0">
+													<Check className="w-4 h-4 text-success-600 dark:text-success-400" />
+												</div>
+												<span className="text-sm text-text-secondary">
+													<span className="font-semibold text-text-primary-sem">
+														{durationDays}
+													</span>{' '}
+													{durationDays === 1 ? 'Day' : 'Days'} access
+												</span>
+											</li>
+
+											{/* Dynamic Features from JSON */}
+											{pkg.features &&
+												Object.entries(pkg.features).map(([key, value]) => (
+													<li key={key} className="flex items-start gap-3">
+														<div className="p-0.5 rounded-full bg-success-100 dark:bg-success-900/30 mt-0.5 shrink-0">
+															<Check className="w-4 h-4 text-success-600 dark:text-success-400" />
+														</div>
+														<span className="text-sm text-text-secondary">
+															<span className="font-semibold text-text-primary-sem capitalize">
+																{key.replace(/_/g, ' ')}:
+															</span>{' '}
+															{typeof value === 'boolean'
+																? value
+																	? 'Included'
+																	: 'Not included'
+																: String(value)}
+														</span>
+													</li>
+												))}
+
+											{/* Default features if no custom features */}
+											{(!pkg.features || Object.keys(pkg.features).length === 0) && (
+												<>
+													<li className="flex items-start gap-3">
+														<div className="p-0.5 rounded-full bg-success-100 dark:bg-success-900/30 mt-0.5 shrink-0">
+															<Check className="w-4 h-4 text-success-600 dark:text-success-400" />
+														</div>
+														<span className="text-sm text-text-secondary">
+															24/7 Support
+														</span>
+													</li>
+													<li className="flex items-start gap-3">
+														<div className="p-0.5 rounded-full bg-success-100 dark:bg-success-900/30 mt-0.5 shrink-0">
+															<Check className="w-4 h-4 text-success-600 dark:text-success-400" />
+														</div>
+														<span className="text-sm text-text-secondary">
+															API Documentation
+														</span>
+													</li>
+												</>
+											)}
+										</ul>
+
+										{/* CTA */}
+										<button
+											onClick={() => {
+												if (!activePlan) {
+													toast.error('No valid plan found for this package')
+													return
+												}
+												setConfirmData({
+													planId: activePlan.id,
+													packageName: pkg.name,
+													price: finalPrice,
+													unitLabel,
+												})
+											}}
+											className={cn(
+												'w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer',
+												isPopular
+													? `${colors.button} text-white shadow-md hover:shadow-lg`
+													: 'bg-surface-input hover:bg-surface-hover text-text-primary-sem border border-border-subtle',
+												(isPurchasing || isBuying) && 'opacity-70 cursor-not-allowed',
+											)}
+											disabled={isPurchasing || isBuying || !activePlan}
+										>
+											{isPurchasing ? (
+												<>
+													<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+													Processing...
+												</>
+											) : (
+												<>
+													Get Started
+													<ArrowRight className="w-5 h-5" />
+												</>
+											)}
+										</button>
 									</div>
-
-									{/* Features */}
-									<ul className="space-y-3 mb-8">
-										{/* Standard Features */}
-										<li className="flex items-start gap-3">
-											<div className="p-0.5 rounded-full bg-success-100 dark:bg-success-900/30 mt-0.5 shrink-0">
-												<Check className="w-4 h-4 text-success-600 dark:text-success-400" />
-											</div>
-											<span className="text-sm text-text-secondary">
-												<span className="font-semibold text-text-primary-sem">
-													{pkg.max_projects}
-												</span>{' '}
-												{pkg.max_projects === 1 ? 'Project' : 'Projects'}
-											</span>
-										</li>
-
-										<li className="flex items-start gap-3">
-											<div className="p-0.5 rounded-full bg-success-100 dark:bg-success-900/30 mt-0.5 shrink-0">
-												<Check className="w-4 h-4 text-success-600 dark:text-success-400" />
-											</div>
-											<span className="text-sm text-text-secondary">
-												<span className="font-semibold text-text-primary-sem">
-													{pkg.max_tables_per_project}
-												</span>{' '}
-												Tables per project
-											</span>
-										</li>
-
-										<li className="flex items-start gap-3">
-											<div className="p-0.5 rounded-full bg-success-100 dark:bg-success-900/30 mt-0.5 shrink-0">
-												<Check className="w-4 h-4 text-success-600 dark:text-success-400" />
-											</div>
-											<span className="text-sm text-text-secondary">
-												<span className="font-semibold text-text-primary-sem">
-													{/* Placeholder until you add max_rows_per_table to API */}
-													10
-												</span>{' '}
-												rows per table
-											</span>
-										</li>
-
-										<li className="flex items-start gap-3">
-											<div className="p-0.5 rounded-full bg-success-100 dark:bg-success-900/30 mt-0.5 shrink-0">
-												<Check className="w-4 h-4 text-success-600 dark:text-success-400" />
-											</div>
-											<span className="text-sm text-text-secondary">
-												<span className="font-semibold text-text-primary-sem">
-													{durationDays}
-												</span>{' '}
-												{durationDays === 1 ? 'Day' : 'Days'} access
-											</span>
-										</li>
-
-										{/* Dynamic Features from JSON */}
-										{pkg.features &&
-											Object.entries(pkg.features).map(([key, value]) => (
-												<li key={key} className="flex items-start gap-3">
-													<div className="p-0.5 rounded-full bg-success-100 dark:bg-success-900/30 mt-0.5 shrink-0">
-														<Check className="w-4 h-4 text-success-600 dark:text-success-400" />
-													</div>
-													<span className="text-sm text-text-secondary">
-														<span className="font-semibold text-text-primary-sem capitalize">
-															{key.replace(/_/g, ' ')}:
-														</span>{' '}
-														{typeof value === 'boolean'
-															? value
-																? 'Included'
-																: 'Not included'
-															: String(value)}
-													</span>
-												</li>
-											))}
-
-										{/* Default features if no custom features */}
-										{(!pkg.features || Object.keys(pkg.features).length === 0) && (
-											<>
-												<li className="flex items-start gap-3">
-													<div className="p-0.5 rounded-full bg-success-100 dark:bg-success-900/30 mt-0.5 shrink-0">
-														<Check className="w-4 h-4 text-success-600 dark:text-success-400" />
-													</div>
-													<span className="text-sm text-text-secondary">
-														24/7 Support
-													</span>
-												</li>
-												<li className="flex items-start gap-3">
-													<div className="p-0.5 rounded-full bg-success-100 dark:bg-success-900/30 mt-0.5 shrink-0">
-														<Check className="w-4 h-4 text-success-600 dark:text-success-400" />
-													</div>
-													<span className="text-sm text-text-secondary">
-														API Documentation
-													</span>
-												</li>
-											</>
-										)}
-									</ul>
-
-									{/* CTA */}
-									<button
-										onClick={() => handlePurchase(pkg.id)}
-										className={cn(
-											'w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2',
-											isPopular
-												? `${colors.button} text-white shadow-md hover:shadow-lg`
-												: 'bg-surface-input hover:bg-surface-hover text-text-primary-sem border border-border-subtle',
-											isPurchasing && 'opacity-70 cursor-not-allowed',
-										)}
-										disabled={isPurchasing}
-									>
-										{isPurchasing ? (
-											<>
-												<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-												Processing...
-											</>
-										) : (
-											<>
-												Get Started
-												<ArrowRight className="w-5 h-5" />
-											</>
-										)}
-									</button>
 								</div>
+							)
+						})}
+					</div>
+				)}
+
+				{/* Extra sections unchanged ... */}
+				<div className="mt-16">
+					<h2 className="text-3xl font-bold text-text-primary-sem text-center mb-8">
+						Why Choose Our Packages?
+					</h2>
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+						<div className="p-6 bg-surface-card rounded-xl border border-border-subtle hover:border-primary-500 transition-all">
+							<div className="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 inline-flex mb-4">
+								<TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
 							</div>
-						)
-					})}
+							<h3 className="text-lg font-semibold text-text-primary-sem mb-2">
+								Scalable Solutions
+							</h3>
+							<p className="text-text-secondary">
+								Grow your projects seamlessly with our flexible table and row
+								limits.
+							</p>
+						</div>
+						<div className="p-6 bg-surface-card rounded-xl border border-border-subtle hover:border-primary-500 transition-all">
+							<div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30 inline-flex mb-4">
+								<Shield className="w-6 h-6 text-green-600 dark:text-green-400" />
+							</div>
+							<h3 className="text-lg font-semibold text-text-primary-sem mb-2">
+								Secure &amp; Reliable
+							</h3>
+							<p className="text-text-secondary">
+								Enterprise-grade security with 99.9% uptime guarantee for your
+								APIs.
+							</p>
+						</div>
+						<div className="p-6 bg-surface-card rounded-xl border border-border-subtle hover:border-primary-500 transition-all">
+							<div className="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30 inline-flex mb-4">
+								<Clock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+							</div>
+							<h3 className="text-lg font-semibold text-text-primary-sem mb-2">
+								Quick Setup
+							</h3>
+							<p className="text-text-secondary">
+								Get your REST API up and running in minutes, not hours or days.
+							</p>
+						</div>
+					</div>
 				</div>
-			)}
 
-			{/* Extra sections unchanged ... */}
-			<div className="mt-16">
-				<h2 className="text-3xl font-bold text-text-primary-sem text-center mb-8">
-					Why Choose Our Packages?
-				</h2>
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-					<div className="p-6 bg-surface-card rounded-xl border border-border-subtle hover:border-primary-500 transition-all">
-						<div className="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 inline-flex mb-4">
-							<TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-						</div>
-						<h3 className="text-lg font-semibold text-text-primary-sem mb-2">
-							Scalable Solutions
-						</h3>
-						<p className="text-text-secondary">
-							Grow your projects seamlessly with our flexible table and row
-							limits.
-						</p>
-					</div>
-					<div className="p-6 bg-surface-card rounded-xl border border-border-subtle hover:border-primary-500 transition-all">
-						<div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30 inline-flex mb-4">
-							<Shield className="w-6 h-6 text-green-600 dark:text-green-400" />
-						</div>
-						<h3 className="text-lg font-semibold text-text-primary-sem mb-2">
-							Secure &amp; Reliable
-						</h3>
-						<p className="text-text-secondary">
-							Enterprise-grade security with 99.9% uptime guarantee for your
-							APIs.
-						</p>
-					</div>
-					<div className="p-6 bg-surface-card rounded-xl border border-border-subtle hover:border-primary-500 transition-all">
-						<div className="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30 inline-flex mb-4">
-							<Clock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-						</div>
-						<h3 className="text-lg font-semibold text-text-primary-sem mb-2">
-							Quick Setup
-						</h3>
-						<p className="text-text-secondary">
-							Get your REST API up and running in minutes, not hours or days.
-						</p>
-					</div>
+				<div className="mt-16 text-center">
+					<h2 className="text-2xl font-bold text-text-primary-sem mb-4">
+						Still have questions?
+					</h2>
+					<p className="text-text-secondary mb-6">
+						Our support team is here to help you choose the right package
+					</p>
+					<button className="px-8 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-semibold">
+						Contact Support
+					</button>
 				</div>
 			</div>
 
-			<div className="mt-16 text-center">
-				<h2 className="text-2xl font-bold text-text-primary-sem mb-4">
-					Still have questions?
-				</h2>
-				<p className="text-text-secondary mb-6">
-					Our support team is here to help you choose the right package
-				</p>
-				<button className="px-8 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-semibold">
-					Contact Support
-				</button>
-			</div>
-		</div>
+			<Modal
+				isOpen={!!confirmData}
+				onClose={() => !isBuying && setConfirmData(null)}
+				title="Confirm Purchase"
+				size="md"
+			>
+				{confirmData && (
+					<div className="space-y-4">
+						<p className="text-sm text-text-secondary">
+							You are about to purchase{' '}
+							<span className="font-semibold text-text-primary-sem">
+								{confirmData.packageName}
+							</span>{' '}
+							plan for{' '}
+							<span className="font-semibold text-text-primary-sem">
+								${confirmData.price.toFixed(2)} / {confirmData.unitLabel}
+							</span>.
+						</p>
+
+						<p className="text-xs text-text-secondary">
+							Please confirm that you want to proceed with this package plan.
+						</p>
+
+						<div className="flex justify-end gap-3 pt-2">
+							<button
+								type="button"
+								onClick={() => setConfirmData(null)}
+								className="px-4 py-2 rounded-lg border border-border-subtle text-sm text-text-secondary hover:bg-surface-hover transition-colors cursor-pointer"
+								disabled={isBuying}
+							>
+								Cancel
+							</button>
+
+							<button
+								type="button"
+								onClick={async () => {
+									if (!confirmData) return
+									await handlePurchase(confirmData.planId)
+									setConfirmData(null)
+								}}
+								className="px-4 py-2 rounded-lg bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 transition-colors flex items-center gap-2 disabled:opacity-70 cursor-pointer"
+								disabled={isBuying}
+							>
+								{isBuying && (
+									<span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+								)}
+								Confirm
+							</button>
+						</div>
+					</div>
+				)}
+			</Modal>
+
+		</>
+
 	)
 }
