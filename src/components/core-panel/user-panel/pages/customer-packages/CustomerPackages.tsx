@@ -638,7 +638,7 @@ export default function CustomerPackages() {
 												</>
 											) : (
 												<>
-													Get Started
+													Buy Package
 													<ArrowRight className="w-5 h-5" />
 												</>
 											)}
