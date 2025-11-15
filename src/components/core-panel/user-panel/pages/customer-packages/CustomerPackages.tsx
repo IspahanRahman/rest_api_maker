@@ -1,6 +1,6 @@
 'use client'
-import React, { useState, useEffect } from 'react'
-import { usePackages } from '@/apis/query/customerPackages/useCustomerPackages'
+import React, { useState } from 'react'
+import { usePackages, usePurchasedPackages } from '@/apis/query/customerPackages/useCustomerPackages'
 import {
 	Package,
 	Check,
@@ -21,7 +21,6 @@ import { PlanTerm, PackagePlan, PackageType } from '@/types/customer-package';
 import { useBuyPackageMutation } from '@/apis/mutation/customerPackage/useBuyPackageMutation';
 import Modal from '@/components/common/Modal';
 import Swal from 'sweetalert2';
-import { mutate } from 'swr'
 
 /** ---------- Utils: normalize API ---------- */
 // features comes as stringified JSON, sometimes double-encoded
@@ -112,11 +111,11 @@ function normalizePackages(apiData: any[]): PackageType[] {
 
 export default function CustomerPackages() {
 	const { data: packages, isLoading, error, mutate } = usePackages()
+	const { data: purchasedPackages, isLoading: isLoadingPurchased, error: errorPurchased, mutate: mutatePurchased } = usePurchasedPackages();
 
 	const [selectedTerm, setSelectedTerm] = useState<PlanTerm>('monthly')
 	// will hold the *plan* id that is being purchased
 	const [processingId, setProcessingId] = useState<number | null>(null)
-	const [buyPlanId, setBuyPlanId] = useState<number | null>(null)
 
 	const {
 		submit,
@@ -153,6 +152,7 @@ export default function CustomerPackages() {
 			}
 			toast.success('Package purchased successfully!');
 			mutate();
+			mutatePurchased();
 		} catch (err) {
 			console.error(err)
 			toast.error('Failed to purchase package')
@@ -309,6 +309,33 @@ export default function CustomerPackages() {
 	const raw = (packages as any)?.data ?? packages ?? []
 	const packageData: PackageType[] = normalizePackages(raw)
 
+	// ---- Normalize purchased packages ----
+	const purchasedRaw = (purchasedPackages as any)?.data ?? purchasedPackages ?? []
+
+	const purchasedPlanIds = new Set<number>()
+	const purchasedPackageIds = new Set<number>()
+	const remainingDaysByPlanId = new Map<number, number>()
+
+	purchasedRaw?.forEach((item: any) => {
+		const pkgObj = item.package ?? item
+		if (!pkgObj) return
+
+		const planObj = pkgObj.PackagePlan ?? pkgObj.packagePlan ?? {}
+		const planId = Number(pkgObj.package_plan_id ?? planObj.id)
+		const pkgId = Number(pkgObj.package_id ?? pkgObj.Package?.id)
+
+		if (planId) {
+			purchasedPlanIds.add(planId)
+			if (item.remaining_days != null) {
+				remainingDaysByPlanId.set(planId, Number(item.remaining_days))
+			}
+		}
+
+		if (pkgId) {
+			purchasedPackageIds.add(pkgId)
+		}
+	})
+
 	const allTerms: PlanTerm[] = ['monthly', 'quarterly', 'half_yearly', 'yearly']
 	const availableTerms: PlanTerm[] = allTerms.filter(term =>
 		packageData.some(pkg => pkg.plans.some(pl => pl.term === term)),
@@ -438,6 +465,14 @@ export default function CustomerPackages() {
 
 							const isPurchasing = processingId === activePlan?.id
 
+							// Purchased info
+							const packagePurchased = purchasedPackageIds.has(pkg.id)
+							const activePlanPurchased =
+								!!activePlan && purchasedPlanIds.has(activePlan.id)
+							const remainingDays = activePlan
+								? remainingDaysByPlanId.get(activePlan.id)
+								: undefined
+
 							return (
 								<div
 									key={pkg.id}
@@ -468,9 +503,18 @@ export default function CustomerPackages() {
 
 										{/* Name + status */}
 										<div className="flex items-center justify-between gap-2 mb-2">
-											<h3 className="text-2xl font-bold text-text-primary-sem">
-												{pkg.name}
-											</h3>
+											<div className="flex items-center gap-2">
+												<h3 className="text-2xl font-bold text-text-primary-sem">
+													{pkg.name}
+												</h3>
+
+												{packagePurchased && (
+													<span className="text-xs px-2 py-0.5 rounded-full bg-success-50 text-success-700 border border-success-200 dark:bg-success-900/20 dark:text-success-300 dark:border-success-700/60">
+														Purchased
+													</span>
+												)}
+											</div>
+
 											{pkg.status && (
 												<span
 													className={cn(
@@ -509,6 +553,13 @@ export default function CustomerPackages() {
 											{discountText && (
 												<p className="text-sm text-success-500 font-medium mt-1">
 													{discountText}
+												</p>
+											)}
+
+											{activePlanPurchased && remainingDays != null && (
+												<p className="text-xs text-success-600 dark:text-success-400 mt-1">
+													Active – {remainingDays} day
+													{remainingDays === 1 ? '' : 's'} remaining
 												</p>
 											)}
 										</div>
@@ -615,6 +666,9 @@ export default function CustomerPackages() {
 													toast.error('No valid plan found for this package')
 													return
 												}
+												if (activePlanPurchased) {
+													return
+												}
 												setConfirmData({
 													planId: activePlan.id,
 													packageName: pkg.name,
@@ -624,14 +678,21 @@ export default function CustomerPackages() {
 											}}
 											className={cn(
 												'w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer',
-												isPopular
-													? `${colors.button} text-white shadow-md hover:shadow-lg`
-													: 'bg-surface-input hover:bg-surface-hover text-text-primary-sem border border-border-subtle',
-												(isPurchasing || isBuying) && 'opacity-70 cursor-not-allowed',
+												activePlanPurchased
+													? 'bg-success-50 text-success-700 border border-success-200 dark:bg-success-900/20 dark:text-success-300 dark:border-success-700/60'
+													: isPopular
+														? `${colors.button} text-white shadow-md hover:shadow-lg`
+														: 'bg-surface-input hover:bg-surface-hover text-text-primary-sem border border-border-subtle',
+												(isPurchasing || isBuying || activePlanPurchased) &&
+												'opacity-70 cursor-not-allowed',
 											)}
-											disabled={isPurchasing || isBuying || !activePlan}
+											disabled={
+												isPurchasing || isBuying || !activePlan || activePlanPurchased
+											}
 										>
-											{isPurchasing ? (
+											{activePlanPurchased ? (
+												<>Already purchased</>
+											) : isPurchasing ? (
 												<>
 													<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
 													Processing...
@@ -759,8 +820,6 @@ export default function CustomerPackages() {
 					</div>
 				)}
 			</Modal>
-
 		</>
-
 	)
 }
