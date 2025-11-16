@@ -31,8 +31,8 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Projects', href: '/projects', icon: FolderKanban },
   { name: 'Packages', href: '/customer-packages', icon: Package },
+  { name: 'Projects', href: '/projects', icon: FolderKanban },
   { name: 'Payments', href: '/payments', icon: CreditCard },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
