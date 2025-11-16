@@ -1,7 +1,8 @@
 'use client'
 import React, { useState, useMemo } from 'react'
 import { Plus, AlertTriangle, Loader2 } from 'lucide-react'
-import { useCustomerProjects } from '@/apis/query/customerProjects/useCutomerProjects'
+import { useCustomerProjects } from '@/apis/query/customerProjects/useCutomerProjects';
+import { useDeleteProjectMutation } from '@/apis/mutation/customerProject/useDeleteProjectMutation';
 import { toast } from 'react-toastify'
 import { Project } from '@/types/customer-project'
 import ProjectStats from './components/ProjectStats'
@@ -9,12 +10,12 @@ import ProjectFilters from './components/ProjectFilters'
 import ProjectCard from './components/ProjectCard'
 import CreateProjectModal from './components/CreateProjectModal'
 import EditProjectModal from './components/EditProjectModal'
-import DeleteConfirmationModal from './components/DeleteConfirmationModal'
+import DeleteConfirmationModal from './components/DeleteConfirmationModal';
+import Swal from 'sweetalert2';
 
 export default function CustomerProjects() {
 	const { data: projectData, isLoading, error, mutate } = useCustomerProjects();
 	const projects = projectData?.data || [];
-	console.log('Projects data:', projects);
 
 	// UI State
 	const [searchQuery, setSearchQuery] = useState('')
@@ -31,7 +32,8 @@ export default function CustomerProjects() {
 
 	// Operation State
 	const [updatingProjectId, setUpdatingProjectId] = useState<number | null>(null)
-	const [deletingProjectId, setDeletingProjectId] = useState<number | null>(null)
+	const [deletingProjectId, setDeletingProjectId] = useState<number | null>(null);
+	const deleteProjectMutation = useDeleteProjectMutation(selectedProject?.id ?? 0);
 
 	// Calculate statistics
 	const stats = useMemo(() => {
@@ -100,30 +102,35 @@ export default function CustomerProjects() {
 	}
 
 	const handleConfirmDelete = async () => {
-		if (!selectedProject) return
+		if (!selectedProject) return;
 
-		setDeletingProjectId(selectedProject.id)
+		setDeletingProjectId(selectedProject.id);
 
 		try {
-			const { AxiosFetcher } = await import('@/apis/configs')
-			const { PROJECTS_ENDPOINTS } = await import('@/apis/endpoints/customerProjects_apis')
-
-			await AxiosFetcher({
-				url: PROJECTS_ENDPOINTS.DELETE(selectedProject.id),
-				method: 'DELETE',
-			})
-
-			mutate()
-			toast.success(`Project "${selectedProject.name}" deleted successfully`)
-			setIsDeleteModalOpen(false)
-			setSelectedProject(null)
+			const response = await deleteProjectMutation.submit();
+			if (!response?.status) {
+				Swal.fire({
+					icon: 'error',
+					title: 'Delete Failed',
+					text: response?.message || 'Failed to delete project',
+				});
+				return;
+			}
+			toast.success(`Project "${selectedProject.name}" deleted successfully`);
+			setIsDeleteModalOpen(false);
+			setSelectedProject(null);
+			mutate();
 		} catch (error: any) {
-			const errorMessage = error?.response?.data?.message || error?.message || 'Failed to delete project'
-			toast.error(errorMessage)
+			const errorMessage = error?.response?.data?.message || error?.message || 'Failed to delete project';
+			Swal.fire({
+				icon: 'error',
+				title: 'Delete Failed',
+				text: errorMessage,
+			});
 		} finally {
-			setDeletingProjectId(null)
+			setDeletingProjectId(null);
 		}
-	}
+	};
 
 	const handleToggleStatus = async (project: Project) => {
 		const newStatus = project.status === 'active' ? 'inactive' : 'active'
@@ -195,7 +202,7 @@ export default function CustomerProjects() {
 	}
 
 	return (
-		<div className="min-h-screen bg-surface-primary p-6">
+		<div className="min-h-screen bg-surface-primary">
 			<div className="max-w-7xl mx-auto space-y-6">
 				{/* Header */}
 				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
