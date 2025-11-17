@@ -190,7 +190,7 @@ export default function CustomerProjects() {
 	// Loading State
 	if (isLoading) {
 		return (
-			<div className="min-h-screen bg-surface-primary p-6">
+			<div className="min-h-screen bg-surface-primary p-6 flex items-center justify-center">
 				<div className="max-w-7xl mx-auto">
 					<div className="flex flex-col items-center justify-center py-20">
 						<Loader2 className="w-12 h-12 text-primary-600 dark:text-primary-400 animate-spin mb-4" />
