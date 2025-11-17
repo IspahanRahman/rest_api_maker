@@ -272,7 +272,7 @@ export default function CustomerProjects() {
 						</div>
 					</div>
 				) : (
-					<div className="bg-surface-card border border-border-subtle rounded-xl overflow-hidden">
+					<div className=" overflow-hidden">
 						<div className="divide-y divide-border-subtle">
 							{filteredProjects.map((project) => (
 								<ProjectCard
