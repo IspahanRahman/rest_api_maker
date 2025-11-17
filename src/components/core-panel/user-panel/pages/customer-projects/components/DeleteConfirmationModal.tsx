@@ -9,6 +9,7 @@ interface DeleteConfirmationModalProps {
     onConfirm: () => void
     projectName: string
     isDeleting: boolean
+	children?: React.ReactNode // <-- Add this line
 }
 
 export default function DeleteConfirmationModal({

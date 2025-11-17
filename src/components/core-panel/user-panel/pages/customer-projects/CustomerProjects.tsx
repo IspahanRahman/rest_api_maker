@@ -1,8 +1,9 @@
 'use client'
 import React, { useState, useMemo } from 'react'
 import { Plus, AlertTriangle, Loader2 } from 'lucide-react'
-import { useCustomerProjects } from '@/apis/query/customerProjects/useCutomerProjects';
+import { useCustomerProjects, useCustomerProjectDetail } from '@/apis/query/customerProjects/useCutomerProjects';
 import { useDeleteProjectMutation } from '@/apis/mutation/customerProject/useDeleteProjectMutation';
+import { usePatchProjectMutation } from '@/apis/mutation/customerProject/usePatchProjectMutation';
 import { toast } from 'react-toastify'
 import { Project } from '@/types/customer-project'
 import ProjectStats from './components/ProjectStats'
@@ -10,9 +11,10 @@ import ProjectFilters from './components/ProjectFilters'
 import ProjectCard from './components/ProjectCard'
 import CreateProjectModal from './components/CreateProjectModal'
 import EditProjectModal from './components/EditProjectModal'
-import DeleteConfirmationModal from './components/DeleteConfirmationModal';
-import Swal from 'sweetalert2';
-
+import DeleteConfirmationModal from './components/DeleteConfirmationModal'
+import StatusChangeConfirmationModal from './components/StatusChangeConfirmationModal'
+import ProjectDetailsModal from './components/ProjectDetailsModal'
+import Swal from 'sweetalert2'
 export default function CustomerProjects() {
 	const { data: projectData, isLoading, error, mutate } = useCustomerProjects();
 	const projects = projectData?.data || [];
@@ -28,12 +30,20 @@ export default function CustomerProjects() {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 	const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-	const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+	const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
+	const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
+	//Status Modal State
+	const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+	const [statusTargetProject, setStatusTargetProject] = useState<Project | null>(null)
+    const [statusTargetNewStatus, setStatusTargetNewStatus] = useState<'active' | 'inactive'>('active')
 
 	// Operation State
 	const [updatingProjectId, setUpdatingProjectId] = useState<number | null>(null)
 	const [deletingProjectId, setDeletingProjectId] = useState<number | null>(null);
-	const deleteProjectMutation = useDeleteProjectMutation(selectedProject?.id ?? 0);
+	const deleteProjectMutation = useDeleteProjectMutation(selectedProject?.id ?? 0);;
+	const { data, setData, isLoading:patchLoading, submit } = usePatchProjectMutation(statusTargetProject?.id ?? 0);
+	const { data: projectDetailData, isLoading: isDetailLoading } = useCustomerProjectDetail(selectedProject?.id ?? 0);
 
 	// Calculate statistics
 	const stats = useMemo(() => {
@@ -89,6 +99,12 @@ export default function CustomerProjects() {
 		setIsCreateModalOpen(true)
 	}
 
+	const handleViewProject = (project: Project) => {
+		setSelectedProject(project)
+		setIsDetailsModalOpen(true)
+		setOpenMenu(null)
+	}
+
 	const handleEditProject = (project: Project) => {
 		setSelectedProject(project)
 		setIsEditModalOpen(true)
@@ -133,28 +149,39 @@ export default function CustomerProjects() {
 	};
 
 	const handleToggleStatus = async (project: Project) => {
-		const newStatus = project.status === 'active' ? 'inactive' : 'active'
+		const newStatus = project.status === 'active' ? 'inactive' : 'active';
+        setStatusTargetProject(project);
+        setStatusTargetNewStatus(newStatus);
+        setIsStatusModalOpen(true);
+        setOpenMenu(null);
+	}
 
-		setUpdatingProjectId(project.id)
+	const handleConfirmStatusChange = async () => {
+		if (!statusTargetProject) return;
 
 		try {
-			const { AxiosFetcher } = await import('@/apis/configs')
-			const { PROJECTS_ENDPOINTS } = await import('@/apis/endpoints/customerProjects_apis')
-
-			await AxiosFetcher({
-				url: PROJECTS_ENDPOINTS.UPDATE(project.id),
-				method: 'PUT',
-				data: { status: newStatus },
-			})
-
-			mutate()
-			toast.success(`Project status updated to ${newStatus}`)
-			setOpenMenu(null)
+			data.status = statusTargetNewStatus;
+			const response = await submit();
+			if (!response?.status) {
+				Swal.fire({
+					icon: 'error',
+					title: 'Update Failed',
+					text: response?.message || 'Failed to update project status',
+				});
+				return;
+			}
+			toast.success(`Project "${statusTargetProject.name}" is now ${statusTargetNewStatus}`);
+			mutate();
 		} catch (error: any) {
-			const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update project status'
-			toast.error(errorMessage)
+			Swal.fire({
+				icon: 'error',
+				title: 'Update Failed',
+				text: error?.response?.data?.message || error?.message || 'Failed to update project status',
+			});
 		} finally {
-			setUpdatingProjectId(null)
+			setUpdatingProjectId(null);
+			setIsStatusModalOpen(false);
+			setStatusTargetProject(null);
 		}
 	}
 
@@ -207,7 +234,7 @@ export default function CustomerProjects() {
 				{/* Header */}
 				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 					<div>
-						<h1 className="text-3xl font-bold text-text-primary mb-2">Customer Projects</h1>
+						<h1 className="text-3xl font-bold text-foreground mb-2">Customer Projects</h1>
 						<p className="text-text-secondary">
 							Manage and monitor all your API projects
 						</p>
@@ -274,18 +301,19 @@ export default function CustomerProjects() {
 				) : (
 					<div className=" overflow-hidden">
 						<div className="divide-y divide-border-subtle">
-							{filteredProjects.map((project) => (
-								<ProjectCard
-									key={project.id}
-									project={project}
-									onEdit={handleEditProject}
-									onDelete={handleDeleteProject}
-									onToggleStatus={handleToggleStatus}
-									isUpdating={updatingProjectId === project.id}
-									openMenu={openMenu}
-									setOpenMenu={setOpenMenu}
-								/>
-							))}
+						{filteredProjects.map((project) => (
+							<ProjectCard
+								key={project.id}
+								project={project}
+								onView={handleViewProject}
+								onEdit={handleEditProject}
+								onDelete={handleDeleteProject}
+								onToggleStatus={handleToggleStatus}
+								isUpdating={updatingProjectId === project.id}
+								openMenu={openMenu}
+								setOpenMenu={setOpenMenu}
+							/>
+						))}
 						</div>
 					</div>
 				)}
@@ -317,6 +345,29 @@ export default function CustomerProjects() {
 				onConfirm={handleConfirmDelete}
 				projectName={selectedProject?.name || ''}
 				isDeleting={deletingProjectId === selectedProject?.id}
+			/>
+
+			<StatusChangeConfirmationModal
+				isOpen={isStatusModalOpen}
+				onClose={() => {
+					setIsStatusModalOpen(false);
+					setStatusTargetProject(null);
+				}}
+				onConfirm={handleConfirmStatusChange}
+				projectName={statusTargetProject?.name || ''}
+				currentStatus={statusTargetProject?.status || ''}
+				newStatus={statusTargetNewStatus}
+				isUpdating={updatingProjectId === statusTargetProject?.id}
+			/>
+
+			<ProjectDetailsModal
+				isOpen={isDetailsModalOpen}
+				onClose={() => {
+					setIsDetailsModalOpen(false)
+					setSelectedProject(null)
+				}}
+				project={projectDetailData?.data || null}
+				isLoading={isDetailLoading}
 			/>
 		</div>
 	)
