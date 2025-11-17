@@ -1,6 +1,5 @@
 'use client'
 import React from 'react'
-import Link from 'next/link'
 import {
 	FolderKanban,
 	CheckCircle2,
@@ -26,6 +25,7 @@ import { toast } from 'react-toastify'
 
 interface ProjectCardProps {
 	project: Project
+	onView: (project: Project) => void
 	onEdit: (project: Project) => void
 	onDelete: (project: Project) => void
 	onToggleStatus: (project: Project) => void
@@ -77,6 +77,7 @@ const getStatusConfig = (status: string) => {
 
 export default function ProjectCard({
 	project,
+	onView,
 	onEdit,
 	onDelete,
 	onToggleStatus,
@@ -128,16 +129,17 @@ export default function ProjectCard({
 							</div>
 
 							{/* Content */}
-							<div className="flex-1 min-w-0">
-								<div className="flex items-center gap-3 mb-2 flex-wrap">
-									<Link
-										href={`/dashboard/projects/${project.id}`}
-										className="text-base lg:text-lg font-semibold text-text-primary-sem hover:text-primary-600 dark:hover:text-primary-400 transition-colors truncate"
-									>
-										{project.name}
-									</Link>
+						<div className="flex-1 min-w-0">
+							<div className="flex items-center gap-3 mb-2 flex-wrap">
+								<button
+									type="button"
+									onClick={() => onView(project)}
+									className="text-base lg:text-lg font-semibold text-text-primary-sem hover:text-primary-600 dark:hover:text-primary-400 transition-colors truncate text-left"
+								>
+									{project.name}
+								</button>
 
-									<span
+								<span
 										className={cn(
 											'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0',
 											statusConfig.chipClass,
@@ -211,8 +213,8 @@ export default function ProjectCard({
 								className="p-2 rounded-lg hover:bg-surface-input dark:hover:bg-surface-card transition-colors text-text-secondary dark:text-text-tertiary hover:text-text-primary dark:hover:text-primary-400 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
 								title={
 									project.status === 'active'
-										? 'Pause project'
-										: 'Activate project'
+										? 'Inactive project'
+										: 'Active project'
 								}
 							>
 								{isUpdating ? (
@@ -222,17 +224,18 @@ export default function ProjectCard({
 								) : (
 									<PlayCircle className="w-5 h-5" />
 								)}
-							</button>
+						</button>
 
-							<Link
-								href={`/dashboard/projects/${project.id}`}
-								className="p-2 rounded-lg hover:bg-surface-input dark:hover:bg-surface-card transition-colors text-text-secondary dark:text-text-tertiary hover:text-text-primary dark:hover:text-primary-400 cursor-pointer"
-								title="View details"
-							>
-								<Eye className="w-5 h-5" />
-							</Link>
+						<button
+							type="button"
+							onClick={() => onView(project)}
+							className="p-2 rounded-lg hover:bg-surface-input dark:hover:bg-surface-card transition-colors text-text-secondary dark:text-text-tertiary hover:text-text-primary dark:hover:text-primary-400 cursor-pointer"
+							title="View details"
+						>
+							<Eye className="w-5 h-5" />
+						</button>
 
-							<button
+						<button
 								type="button"
 								onClick={() => onEdit(project)}
 								className="p-2 rounded-lg hover:bg-surface-input dark:hover:bg-surface-card transition-colors text-text-secondary dark:text-text-tertiary hover:text-text-primary dark:hover:text-primary-400 cursor-pointer"
@@ -323,13 +326,14 @@ export default function ProjectCard({
 						<PlayCircle className="w-5 h-5" />
 					)}
 				</button>
-				<Link
-					href={`/dashboard/projects/${project.id}`}
+				<button
+					type="button"
+					onClick={() => onView(project)}
 					className="p-2 rounded-lg bg-surface-input dark:bg-surface-card text-text-secondary dark:text-text-tertiary hover:text-text-primary dark:hover:text-primary-400 hover:bg-surface-hover dark:hover:bg-surface-card transition-colors"
 					title="View details"
 				>
 					<Eye className="w-5 h-5" />
-				</Link>
+				</button>
 				<button
 					type="button"
 					onClick={() => onEdit(project)}
