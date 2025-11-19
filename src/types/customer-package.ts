@@ -1,7 +1,7 @@
 export type PlanTerm = 'monthly' | 'quarterly' | 'half_yearly' | 'yearly' | 'custom'
 
 export interface PackagePlan {
-	id: number
+	id: string
 	plan_type: string // 'monthly' | 'yearly' | others | ''
 	duration_days: number
 	price: number
@@ -13,7 +13,7 @@ export interface PackagePlan {
 }
 
 export interface PackageType {
-	id: number
+	id: string
 	name: string
 	status?: string
 	sell_count?: number
@@ -24,5 +24,5 @@ export interface PackageType {
 }
 
 export interface PackageBuyRequest{
-	package_plan_id: number
+	package_plan_id: string;
 }

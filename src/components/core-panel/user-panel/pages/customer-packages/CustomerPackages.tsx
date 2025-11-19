@@ -78,7 +78,7 @@ function normalizePackages(apiData: any[]): PackageType[] {
 						: parseFloat(plan.final_price ?? plan.price ?? '0')
 
 				const basePlan = {
-					id: Number(plan.id),
+					id: String(plan.id),
 					plan_type: String(plan.plan_type ?? ''),
 					duration_days: duration,
 					price,
@@ -97,7 +97,7 @@ function normalizePackages(apiData: any[]): PackageType[] {
 			: []
 
 		return {
-			id: Number(p.id),
+			id: p.id != null ? String(p.id) : '',
 			name: String(p.name ?? 'Package'),
 			status: p.status ? String(p.status) : undefined,
 			sell_count: p.sell_count != null ? Number(p.sell_count) : undefined,
@@ -115,7 +115,7 @@ export default function CustomerPackages() {
 
 	const [selectedTerm, setSelectedTerm] = useState<PlanTerm>('monthly')
 	// will hold the *plan* id that is being purchased
-	const [processingId, setProcessingId] = useState<number | null>(null)
+	const [processingId, setProcessingId] = useState<string | null>(null)
 
 	const {
 		submit,
@@ -125,7 +125,7 @@ export default function CustomerPackages() {
 	} = useBuyPackageMutation();
 	// NEW: confirmation modal data
 	type ConfirmData = {
-		planId: number
+		planId: string
 		packageName: string
 		price: number
 		unitLabel: string
@@ -133,14 +133,14 @@ export default function CustomerPackages() {
 
 	const [confirmData, setConfirmData] = useState<ConfirmData>(null);
 
-	const handlePurchase = async (planId?: number) => {
+	const handlePurchase = async (planId?: string) => {
 		if (!planId) {
 			toast.error('No valid plan found for this package')
 			return
 		}
 		try {
 			setProcessingId(planId)
-			data.package_plan_id = planId;
+			data.package_plan_id = String(planId);
 			const result = await submit();
 			if (!result?.status) {
 				Swal.fire({
@@ -312,17 +312,17 @@ export default function CustomerPackages() {
 	// ---- Normalize purchased packages ----
 	const purchasedRaw = (purchasedPackages as any)?.data ?? purchasedPackages ?? []
 
-	const purchasedPlanIds = new Set<number>()
-	const purchasedPackageIds = new Set<number>()
-	const remainingDaysByPlanId = new Map<number, number>()
+	const purchasedPlanIds = new Set<string>()
+	const purchasedPackageIds = new Set<string>()
+	const remainingDaysByPlanId = new Map<string, number>()
 
 	purchasedRaw?.forEach((item: any) => {
 		const pkgObj = item.package ?? item
 		if (!pkgObj) return
 
 		const planObj = pkgObj.PackagePlan ?? pkgObj.packagePlan ?? {}
-		const planId = Number(pkgObj.package_plan_id ?? planObj.id)
-		const pkgId = Number(pkgObj.package_id ?? pkgObj.Package?.id)
+		const planId = pkgObj.package_plan_id ?? planObj.id
+		const pkgId = pkgObj.package_id ?? pkgObj.Package?.id
 
 		if (planId) {
 			purchasedPlanIds.add(planId)

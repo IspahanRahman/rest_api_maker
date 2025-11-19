@@ -30,8 +30,8 @@ interface ProjectCardProps {
 	onDelete: (project: Project) => void
 	onToggleStatus: (project: Project) => void
 	isUpdating: boolean
-	openMenu: number | null
-	setOpenMenu: (id: number | null) => void
+	openMenu: string | null
+	setOpenMenu: (id: string | null) => void
 }
 
 const getStatusConfig = (status: string) => {

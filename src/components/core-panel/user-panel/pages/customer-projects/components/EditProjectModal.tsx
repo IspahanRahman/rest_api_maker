@@ -1,11 +1,13 @@
 'use client'
 import React, { useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
-import { useUpdateProjectMutation } from '@/apis/mutation/customerProject/useUpdateProjectMutation'
+import { useUpdateProjectMutation } from '@/apis/mutation/customerProject/useUpdateProjectMutation';
+import { usePurchasedPackages } from '@/apis/query/customerPackages/useCustomerPackages';
 import { toast } from 'react-toastify'
 import Modal from '@/components/common/Modal'
 import { Project } from '@/types/customer-project';
 import Swal from 'sweetalert2';
+import Select from '@/components/common/Select';
 
 interface EditProjectModalProps {
 	isOpen: boolean
@@ -15,12 +17,19 @@ interface EditProjectModalProps {
 }
 
 export default function EditProjectModal({ isOpen, onClose, onSuccess, project }: EditProjectModalProps) {
-	const { data, setData, submit, isLoading, errors } = useUpdateProjectMutation(project?.id || 0)
+	const { data: purchasedPackages } = usePurchasedPackages();
+	//create plan options with package names
+	const planOptions = purchasedPackages?.data?.map((pkg:any) => ({
+		value: pkg?.package?.package_plan_id,
+		label: `${pkg?.package?.Package?.name} - ${pkg?.package?.PackagePlan?.plan_type}`
+	})) || [];
+	const { data, setData, submit, isLoading, errors } = useUpdateProjectMutation(project?.id ?? "")
 
 	useEffect(() => {
 		if (project) {
 			setData('name', project.name)
-			setData('description', project.description || '')
+			setData('description', project.description || '');
+			setData('package_plan_id', project.package_plan_id);
 		}
 	}, [project])
 
@@ -28,6 +37,10 @@ export default function EditProjectModal({ isOpen, onClose, onSuccess, project }
 		e.preventDefault();
 		if (!(data.name ?? '').trim()) {
 			toast.error('Project name is required');
+			return;
+		}
+		if (!(data.package_plan_id ?? '').trim()) {
+			toast.error('Package plan is required');
 			return;
 		}
 		try {
@@ -46,6 +59,7 @@ export default function EditProjectModal({ isOpen, onClose, onSuccess, project }
 			// Reset form
 			setData('name', '');
 			setData('description', '');
+			setData('package_plan_id', '');
 		}
 		catch (error) {
 			Swal.fire({
@@ -73,6 +87,17 @@ export default function EditProjectModal({ isOpen, onClose, onSuccess, project }
 			className="max-h-[90vh] overflow-y-auto"
 		>
 			<form onSubmit={handleSubmit} className="space-y-6">
+				{/* Package Plan */}
+				<Select
+					label="Package Plan"
+					placeholder="Select a package plan"
+					options={planOptions}
+					value={data.package_plan_id ?? ''}
+					onChange={(value) => setData('package_plan_id', value !== undefined ? String(value) : undefined)}
+					disabled={isLoading}
+					error={errors.package_plan_id}
+					required
+				/>
 				{/* Project Name */}
 				<div>
 					<label htmlFor="edit-name" className="block text-sm font-medium text-foreground mb-2">

@@ -6,6 +6,6 @@ export const useCustomerProjects = () => {
   return usePaginatedQuery<any>(PROJECTS_ENDPOINTS.LIST)
 }
 
-export const useCustomerProjectDetail = (projectId: number) => {
+export const useCustomerProjectDetail = (projectId: string) => {
   return useQuery<any>(PROJECTS_ENDPOINTS.DETAIL(projectId))
 }
