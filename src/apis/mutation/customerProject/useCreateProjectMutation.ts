@@ -6,6 +6,7 @@ export function useCreateProjectMutation() {
 	const { submit, isLoading, data, errors, setData } = useForm<ProjectCreateRequest>(
 		PROJECTS_ENDPOINTS.CREATE,
 		{
+			package_plan_id: "",
 			name: "",
 			description: ""
 		},

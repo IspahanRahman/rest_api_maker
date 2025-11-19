@@ -1,10 +1,12 @@
 'use client'
 import React from 'react'
 import { Loader2 } from 'lucide-react'
-import { useCreateProjectMutation } from '@/apis/mutation/customerProject/useCreateProjectMutation'
+import { useCreateProjectMutation } from '@/apis/mutation/customerProject/useCreateProjectMutation';
+import { usePurchasedPackages } from '@/apis/query/customerPackages/useCustomerPackages';
 import { toast } from 'react-toastify'
 import Modal from '@/components/common/Modal';
-import Swal from 'sweetalert2'
+import Swal from 'sweetalert2';
+import Select from '@/components/common/Select';
 
 interface CreateProjectModalProps {
 	isOpen: boolean
@@ -13,12 +15,24 @@ interface CreateProjectModalProps {
 }
 
 export default function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProjectModalProps) {
+	const { data: purchasedPackages } = usePurchasedPackages();
+	console.log('Purchased Packages:', purchasedPackages?.data);
+	//create plan options with packag names
+	const planOptions = purchasedPackages?.data?.map((pkg:any) => ({
+		value: pkg?.package?.package_plan_id,
+		label: `${pkg?.package?.Package?.name} - ${pkg?.package?.PackagePlan?.plan_type}`
+	})) || [];
+
 	const { data, setData, submit, isLoading, errors } = useCreateProjectMutation()
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		if (!data.name.trim()) {
 			toast.error('Project name is required');
+			return;
+		}
+		if (!data.package_plan_id) {
+			toast.error('Please select a package plan');
 			return;
 		}
 		try {
@@ -37,6 +51,7 @@ export default function CreateProjectModal({ isOpen, onClose, onSuccess }: Creat
 			// Reset form
 			setData('name', '');
 			setData('description', '');
+			setData('package_plan_id', '');
 		}
 		catch (error) {
 			Swal.fire({
@@ -51,8 +66,9 @@ export default function CreateProjectModal({ isOpen, onClose, onSuccess }: Creat
 		if (!isLoading) {
 			onClose()
 			// Reset form
-			setData('name', '')
-			setData('description', '')
+			setData('name', '');
+			setData('description', '');
+			setData('package_plan_id', '');
 		}
 	}
 
@@ -66,6 +82,20 @@ export default function CreateProjectModal({ isOpen, onClose, onSuccess }: Creat
 		>
 			{/* Form */}
 			<form onSubmit={handleSubmit} className="space-y-5">
+				{/* Package Plan */}
+				{planOptions.length > 0 && (
+					<Select
+                        id="package_plan_id"
+                        label="Select Package Plan"
+                        value={data.package_plan_id || ''}
+                        onChange={(value) => setData('package_plan_id', value as string)}
+                        options={planOptions}
+                        placeholder="-- Select a package plan --"
+                        disabled={isLoading}
+                        error={errors.package_plan_id}
+                        required
+                    />
+				)}
 				{/* Project Name */}
 				<div>
 					<label htmlFor="name" className="block text-sm font-medium text-foreground mb-2">

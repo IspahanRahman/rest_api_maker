@@ -6,5 +6,5 @@ export const usePackages = () => {
 }
 
 export const usePurchasedPackages = () => {
-  return useQuery<any[]>(PACKAGES_ENDPOINTS.PURCHASED_PACKAGES)
+  return useQuery<any>(PACKAGES_ENDPOINTS.PURCHASED_PACKAGES)
 }

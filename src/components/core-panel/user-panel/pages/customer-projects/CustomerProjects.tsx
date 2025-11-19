@@ -24,7 +24,7 @@ export default function CustomerProjects() {
 	const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'suspended'>('all')
 	const [sortBy, setSortBy] = useState<'name' | 'created' | 'updated'>('updated')
 	const [showFilters, setShowFilters] = useState(false)
-	const [openMenu, setOpenMenu] = useState<number | null>(null)
+	const [openMenu, setOpenMenu] = useState<string | null>(null)
 
 	// Modal State
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -39,11 +39,11 @@ export default function CustomerProjects() {
     const [statusTargetNewStatus, setStatusTargetNewStatus] = useState<'active' | 'inactive'>('active')
 
 	// Operation State
-	const [updatingProjectId, setUpdatingProjectId] = useState<number | null>(null)
-	const [deletingProjectId, setDeletingProjectId] = useState<number | null>(null);
-	const deleteProjectMutation = useDeleteProjectMutation(selectedProject?.id ?? 0);;
-	const { data, setData, isLoading:patchLoading, submit } = usePatchProjectMutation(statusTargetProject?.id ?? 0);
-	const { data: projectDetailData, isLoading: isDetailLoading } = useCustomerProjectDetail(selectedProject?.id ?? 0);
+	const [updatingProjectId, setUpdatingProjectId] = useState<string | null>(null)
+	const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
+	const deleteProjectMutation = useDeleteProjectMutation(String(selectedProject?.id ?? '0'));
+	const { data, setData, isLoading:patchLoading, submit } = usePatchProjectMutation(String(statusTargetProject?.id ?? '0'));
+	const { data: projectDetailData, isLoading: isDetailLoading } = useCustomerProjectDetail(String(selectedProject?.id ?? '0'));
 
 	// Calculate statistics
 	const stats = useMemo(() => {

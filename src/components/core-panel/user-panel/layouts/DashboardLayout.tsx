@@ -161,7 +161,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Theme toggle */}
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-lg hover:bg-surface-hover"
+              className="p-2 rounded-lg hover:bg-surface-hover cursor-pointer"
               aria-label="Toggle theme"
             >
               {theme === 'dark' ? (
@@ -172,7 +172,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
 
             {/* Notifications */}
-            <button className="relative p-2 rounded-lg hover:bg-surface-hover">
+            <button className="relative p-2 rounded-lg hover:bg-surface-hover cursor-pointer">
               <Bell className="w-5 h-5 text-text-secondary" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-error-500 rounded-full"></span>
             </button>
@@ -181,7 +181,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="relative">
               <button
                 onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                className="flex items-center gap-2 p-2 rounded-lg hover:bg-surface-hover"
+                className="flex items-center gap-2 p-2 rounded-lg hover:bg-surface-hover cursor-pointer"
               >
                 <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
                   <User className="w-4 h-4 text-primary-600 dark:text-primary-400" />
