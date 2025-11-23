@@ -18,6 +18,7 @@ import {
   ChevronDown,
   Moon,
   Sun,
+  Database
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { logout, getCurrentUser } from '@/lib/auth'
@@ -33,6 +34,7 @@ const navItems: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Packages', href: '/customer-packages', icon: Package },
   { name: 'Projects', href: '/projects', icon: FolderKanban },
+  { name: 'Project Tables', href: '/project-tables', icon: Database },
   { name: 'Payments', href: '/payments', icon: CreditCard },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]

@@ -43,7 +43,9 @@ export default function CustomerProjects() {
 	const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
 	const deleteProjectMutation = useDeleteProjectMutation(String(selectedProject?.id ?? '0'));
 	const { data, setData, isLoading:patchLoading, submit } = usePatchProjectMutation(String(statusTargetProject?.id ?? '0'));
-	const { data: projectDetailData, isLoading: isDetailLoading } = useCustomerProjectDetail(String(selectedProject?.id ?? '0'));
+	const { data: projectDetailData, isLoading: isDetailLoading } = useCustomerProjectDetail(
+		selectedProject?.id ? String(selectedProject.id) : ''
+	);
 
 	// Calculate statistics
 	const stats = useMemo(() => {
