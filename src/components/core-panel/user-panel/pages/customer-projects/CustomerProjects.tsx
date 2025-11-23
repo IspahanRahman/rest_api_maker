@@ -43,7 +43,9 @@ export default function CustomerProjects() {
 	const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
 	const deleteProjectMutation = useDeleteProjectMutation(String(selectedProject?.id ?? '0'));
 	const { data, setData, isLoading:patchLoading, submit } = usePatchProjectMutation(String(statusTargetProject?.id ?? '0'));
-	const { data: projectDetailData, isLoading: isDetailLoading } = useCustomerProjectDetail(String(selectedProject?.id ?? '0'));
+	const { data: projectDetailData, isLoading: isDetailLoading } = useCustomerProjectDetail(
+		selectedProject?.id ? String(selectedProject.id) : ''
+	);
 
 	// Calculate statistics
 	const stats = useMemo(() => {
@@ -242,7 +244,7 @@ export default function CustomerProjects() {
 					<button
 						onClick={handleCreateProject}
 						className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700
-							text-white rounded-lg font-medium shadow-sm hover:shadow-md transition-all"
+							text-white rounded-lg font-medium shadow-sm hover:shadow-md transition-all cursor-pointer"
 					>
 						<Plus className="w-5 h-5" />
 						Create Project

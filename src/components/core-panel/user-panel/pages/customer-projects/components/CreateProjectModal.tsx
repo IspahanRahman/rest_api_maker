@@ -16,7 +16,6 @@ interface CreateProjectModalProps {
 
 export default function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProjectModalProps) {
 	const { data: purchasedPackages } = usePurchasedPackages();
-	console.log('Purchased Packages:', purchasedPackages?.data);
 	//create plan options with packag names
 	const planOptions = purchasedPackages?.data?.map((pkg:any) => ({
 		value: pkg?.package?.package_plan_id,
@@ -94,6 +93,7 @@ export default function CreateProjectModal({ isOpen, onClose, onSuccess }: Creat
                         disabled={isLoading}
                         error={errors.package_plan_id}
                         required
+						className='cursor-pointer'
                     />
 				)}
 				{/* Project Name */}

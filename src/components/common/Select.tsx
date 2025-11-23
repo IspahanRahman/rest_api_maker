@@ -57,12 +57,14 @@ export default function Select({
 					onChange={(e) => onChange(e.target.value)}
 					disabled={disabled}
 					className={cn(
-						'w-full px-4 py-2.5 bg-surface-input dark:bg-surface-card border border-border-input dark:border-border-input rounded-lg',
-						'text-foreground dark:text-text-secondary placeholder:text-text-tertiary dark:placeholder:text-text-tertiary',
-						'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent',
+						'w-full px-4 py-2.5 bg-white dark:bg-surface-card',
+						'border border-border-input dark:border-border-subtle rounded-lg',
+						'text-foreground dark:text-foreground placeholder:text-text-tertiary dark:placeholder:text-text-tertiary',
+						'focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 focus:border-transparent',
 						'disabled:opacity-50 disabled:cursor-not-allowed',
 						'transition-all appearance-none pr-10',
-						error && 'border-error-500 focus:ring-error-500',
+						'hover:border-border-input dark:hover:border-border-input',
+						error && 'border-error-500 dark:border-error-500 focus:ring-error-500 dark:focus:ring-error-400',
 					)}
 				>
 					{placeholder && (
@@ -85,7 +87,8 @@ export default function Select({
 				<ChevronDown
 					className={cn(
 						'absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5',
-						'text-text-tertiary dark:text-text-tertiary pointer-events-none',
+						'text-text-secondary dark:text-text-tertiary pointer-events-none',
+						'transition-colors',
 						disabled && 'opacity-50',
 					)}
 				/>
