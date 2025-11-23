@@ -244,7 +244,7 @@ export default function CustomerProjects() {
 					<button
 						onClick={handleCreateProject}
 						className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700
-							text-white rounded-lg font-medium shadow-sm hover:shadow-md transition-all"
+							text-white rounded-lg font-medium shadow-sm hover:shadow-md transition-all cursor-pointer"
 					>
 						<Plus className="w-5 h-5" />
 						Create Project

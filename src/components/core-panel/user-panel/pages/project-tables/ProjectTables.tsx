@@ -32,7 +32,72 @@ export default function ProjectTables() {
 
 	// Fetch tables for selected project
 	const { data: tablesData, isLoading: tablesLoading, error, mutate } = useProjectTables(selectedProjectId)
-	const tables = tablesData?.data || []
+	const tables = useMemo(() => {
+		if (!tablesData?.data) return []
+		return tablesData.data.map((table: any) => {
+			// Parse schema_json to get columns
+			let parsedColumns = []
+			try {
+				let schemaData = table.schema_json
+				// Handle double-encoded JSON strings
+				if (typeof schemaData === 'string') {
+					schemaData = JSON.parse(schemaData)
+					// If still a string, parse again (handles double-encoding)
+					if (typeof schemaData === 'string') {
+						schemaData = JSON.parse(schemaData)
+					}
+				}
+				parsedColumns = Array.isArray(schemaData) ? schemaData : []
+			} catch (e) {
+				console.error('Error parsing schema_json:', e)
+				parsedColumns = []
+			}
+
+			// Parse api_endpoints if exists
+			let parsedEndpoints = []
+			try {
+				let endpointData = table.api_endpoints
+				if (endpointData) {
+					if (typeof endpointData === 'string') {
+						endpointData = JSON.parse(endpointData)
+						// If still a string, parse again (handles double-encoding)
+						if (typeof endpointData === 'string') {
+							endpointData = JSON.parse(endpointData)
+						}
+					}
+					parsedEndpoints = Array.isArray(endpointData) ? endpointData : []
+				}
+			} catch (e) {
+				console.error('Error parsing api_endpoints:', e)
+				parsedEndpoints = []
+			}
+
+			return {
+				...table,
+				name: table.table_name, // Map table_name to name for component compatibility
+				row_count: 0, // API doesn't provide this yet
+				columns_count: parsedColumns.length || 0, // Calculate from schema
+				status: table.Project?.status || 'active', // Use Project status as fallback
+				schema_json: parsedColumns,
+				api_endpoints: parsedEndpoints,
+				columns: parsedColumns?.map((col: any, index: number) => ({
+					id: `${table.id}-col-${index}`,
+					name: col.name,
+					data_type: col.data_type,
+					is_nullable: col.is_nullable,
+					default_value: col.default_value,
+					is_primary_key: col.is_primary_key,
+					is_unique: col.is_unique,
+					is_indexed: col.is_indexed || false,
+					max_length: col.max_length,
+					precision: col.precision,
+					scale: col.scale,
+					createdAt: table.createdAt,
+					updatedAt: table.updatedAt,
+				})),
+			}
+		})
+	}, [tablesData?.data])
 
 	const deleteTableMutation = useDeleteTableMutation(selectedTable?.id ?? '0')
 
@@ -58,7 +123,7 @@ export default function ProjectTables() {
 		if (searchQuery) {
 			filtered = filtered.filter(
 				(t: ProjectTable) =>
-					t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+					(t.name || t.table_name)?.toLowerCase().includes(searchQuery.toLowerCase()) ||
 					t.description?.toLowerCase().includes(searchQuery.toLowerCase())
 			)
 		}
@@ -166,7 +231,7 @@ export default function ProjectTables() {
 							disabled={!selectedProjectId}
 							className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700
 								text-white rounded-lg font-medium shadow-sm hover:shadow-md transition-all
-								disabled:opacity-50 disabled:cursor-not-allowed"
+								disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
 						>
 							<Plus className="w-5 h-5" />
 							Create Table

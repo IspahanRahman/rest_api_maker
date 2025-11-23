@@ -54,7 +54,7 @@ const getStatusConfig = (status: string) => {
 }
 
 export default function TableCard({ table, onView, onEdit, onDelete, openMenu, setOpenMenu }: TableCardProps) {
-	const statusConfig = getStatusConfig(table.status)
+	const statusConfig = getStatusConfig(table.status || 'active')
 	const StatusIcon = statusConfig.icon
 	const createdDate = new Date(table.createdAt)
 	const updatedDate = new Date(table.updatedAt)
@@ -112,7 +112,7 @@ export default function TableCard({ table, onView, onEdit, onDelete, openMenu, s
 							<span>•</span>
 							<div className="flex items-center gap-2">
 								<List className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-								<span className="font-mono">{table.row_count.toLocaleString()} rows</span>
+								<span className="font-mono">{(table.row_count || 0).toLocaleString()} rows</span>
 							</div>
 						</div>
 

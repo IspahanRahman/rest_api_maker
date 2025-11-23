@@ -93,6 +93,7 @@ export default function CreateProjectModal({ isOpen, onClose, onSuccess }: Creat
                         disabled={isLoading}
                         error={errors.package_plan_id}
                         required
+						className='cursor-pointer'
                     />
 				)}
 				{/* Project Name */}

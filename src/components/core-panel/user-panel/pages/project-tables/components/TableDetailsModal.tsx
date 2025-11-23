@@ -22,6 +22,7 @@ interface TableDetailsModalProps {
 }
 
 export default function TableDetailsModal({ isOpen, onClose, table }: TableDetailsModalProps) {
+	console.log('TableDetailsModal table:', table);
 	const getStatusConfig = (status: string) => {
 		switch (status) {
 			case 'active':
@@ -63,14 +64,15 @@ export default function TableDetailsModal({ isOpen, onClose, table }: TableDetai
 
 	if (!table) return null
 
-	const statusConfig = getStatusConfig(table.status)
+	const statusConfig = getStatusConfig(table.status || 'active')
 	const StatusIcon = statusConfig?.icon
 
 	return (
 		<Modal isOpen={isOpen} onClose={onClose} title="" size="lg">
-			<div className="space-y-6">
-				{/* Header */}
-				<div className="flex items-start justify-between pb-4 border-b border-border-subtle dark:border-border-input">
+			<div className="max-h-[calc(90vh-120px)] overflow-y-auto pr-2">
+				<div className="space-y-6">
+					{/* Header */}
+					<div className="flex items-start justify-between pb-4 border-b border-border-subtle dark:border-border-input">
 					<div className="flex-1">
 						<div className="flex items-center gap-3 mb-2">
 							<div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
@@ -115,9 +117,9 @@ export default function TableDetailsModal({ isOpen, onClose, table }: TableDetai
 									<List className="w-4 h-4 text-text-tertiary dark:text-text-tertiary" />
 									<span className="text-sm text-text-secondary dark:text-text-tertiary">Total Rows</span>
 								</div>
-								<p className="text-base font-semibold text-text-primary dark:text-primary-200">
-									{table.row_count.toLocaleString()}
-								</p>
+							<p className="text-base font-semibold text-text-primary dark:text-primary-200">
+								{(table.row_count || 0).toLocaleString()}
+							</p>
 							</div>
 						</div>
 					</div>
@@ -146,10 +148,10 @@ export default function TableDetailsModal({ isOpen, onClose, table }: TableDetai
 					<div className="flex items-center justify-between">
 						<div className="flex-1">
 							<span className="text-sm text-primary-700 dark:text-primary-300 block mb-1">Table Name</span>
-							<p className="text-base font-mono font-medium text-primary-900 dark:text-primary-200">{table.name}</p>
+							<p className="text-base font-mono font-medium text-primary-900 dark:text-primary-200">{table.name || table.table_name}</p>
 						</div>
 						<button
-							onClick={() => handleCopy(table.name, 'Table name')}
+							onClick={() => handleCopy(table.name || table.table_name, 'Table name')}
 							className="p-2 hover:bg-primary-100 dark:hover:bg-primary-900/30 rounded-lg transition-colors"
 							title="Copy table name"
 						>
@@ -199,16 +201,17 @@ export default function TableDetailsModal({ isOpen, onClose, table }: TableDetai
 					</div>
 				)}
 
-				{/* Footer Actions */}
-				<div className="flex items-center justify-end pt-4 border-t border-border-subtle dark:border-border-input">
-					<button
-						type="button"
-						onClick={onClose}
-						className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 dark:bg-primary-700 dark:hover:bg-primary-800
-							text-white rounded-lg font-medium transition-colors"
-					>
-						Close
-					</button>
+					{/* Footer Actions */}
+					<div className="flex items-center justify-end pt-4 border-t border-border-subtle dark:border-border-input">
+						<button
+							type="button"
+							onClick={onClose}
+							className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 dark:bg-primary-700 dark:hover:bg-primary-800
+								text-white rounded-lg font-medium transition-colors"
+						>
+							Close
+						</button>
+					</div>
 				</div>
 			</div>
 		</Modal>

@@ -17,14 +17,22 @@ export interface TableColumn {
 export interface ProjectTable {
     id: string
     project_id: string
-    name: string
+    table_name: string
+    name?: string
     description?: string | null
-    row_count: number
-    columns_count: number
-    status: 'active' | 'inactive'
+    row_count?: number
+    columns_count?: number
+    status?: 'active' | 'inactive'
+    schema_json: string | ColumnSchema[]
+    api_endpoints?: string | ApiEndpoint[]
     createdAt: string
     updatedAt: string
     columns?: TableColumn[]
+    Project?: {
+        id: string
+        name: string
+        status: 'active' | 'inactive'
+    }
 }
 
 export interface ColumnSchema {
