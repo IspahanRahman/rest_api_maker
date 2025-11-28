@@ -1,8 +1,8 @@
 // Dashboard API Endpoints
 export const DASHBOARD_ENDPOINTS = {
-  STATS: '/dashboard/stats',
-  RECENT_PROJECTS: '/dashboard/projects/recent',
-  RECENT_PAYMENTS: '/dashboard/payments/recent',
-  ACTIVITY: '/dashboard/activity',
+  STATS: '/customer/dashboard',
+  RECENT_PROJECTS: '/customer/dashboard/projects/recent',
+  RECENT_PAYMENTS: '/customer/dashboard/payments/recent',
+  ACTIVITY: '/customer/dashboard/activity',
 }
 

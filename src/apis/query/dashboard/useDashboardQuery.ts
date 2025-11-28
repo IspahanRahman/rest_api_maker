@@ -1,19 +1,6 @@
 import { useQuery } from '@/hooks/useQuery'
 import { DASHBOARD_ENDPOINTS } from '@/apis/endpoints/dashboard_apis'
 
-interface DashboardStats {
-  totalProjects: number
-  activeProjects: number
-  inactiveProjects: number
-  suspendedProjects: number
-  activePackages: number
-  totalPayments: number
-  completedPayments: number
-  pendingPayments: number
-  failedPayments: number
-  monthlySpending: number
-  lastMonthSpending: number
-}
 
 interface Project {
   id: number
@@ -50,7 +37,7 @@ interface Activity {
 }
 
 export const useDashboardStats = () => {
-  return useQuery<DashboardStats>(DASHBOARD_ENDPOINTS.STATS)
+  return useQuery<any>(DASHBOARD_ENDPOINTS.STATS)
 }
 
 export const useRecentProjects = () => {
