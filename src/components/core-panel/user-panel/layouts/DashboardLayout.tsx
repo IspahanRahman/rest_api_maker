@@ -79,6 +79,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <button
               onClick={() => setSidebarOpen(false)}
               className="lg:hidden p-2 rounded-lg hover:bg-surface-hover"
+			  type="button"
+			  aria-label="Close sidebar"
             >
               <X className="w-5 h-5" />
             </button>
@@ -144,6 +146,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <button
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden p-2 rounded-lg hover:bg-surface-hover"
+			  aria-label="Open sidebar"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -174,7 +177,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
 
             {/* Notifications */}
-            <button className="relative p-2 rounded-lg hover:bg-surface-hover cursor-pointer">
+            <button className="relative p-2 rounded-lg hover:bg-surface-hover cursor-pointer" aria-label="View notifications" type="button">
               <Bell className="w-5 h-5 text-text-secondary" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-error-500 rounded-full"></span>
             </button>
@@ -184,6 +187,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <button
                 onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                 className="flex items-center gap-2 p-2 rounded-lg hover:bg-surface-hover cursor-pointer"
+				aria-label="User menu"
               >
                 <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
                   <User className="w-4 h-4 text-primary-600 dark:text-primary-400" />
