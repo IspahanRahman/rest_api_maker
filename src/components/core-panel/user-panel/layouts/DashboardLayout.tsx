@@ -203,7 +203,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   />
                   <div className="absolute right-0 mt-2 w-48 py-2 bg-surface-card rounded-lg shadow-lg border border-border-subtle z-50">
                     <Link
-                      href={`/${locale}/dashboard/settings`}
+                      href={`/${locale}/settings`}
                       className="flex items-center gap-2 px-4 py-2 text-sm text-text-secondary hover:bg-surface-hover hover:text-text-primary-sem"
                       onClick={() => setProfileMenuOpen(false)}
                     >
