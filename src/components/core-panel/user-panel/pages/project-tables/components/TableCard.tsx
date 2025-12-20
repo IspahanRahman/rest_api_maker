@@ -13,7 +13,7 @@ import {
 	Calendar,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ProjectTable } from '@/types/project-table'
+import { ProjectTable } from '@/types/project-table';
 
 interface TableCardProps {
 	table: ProjectTable
@@ -182,8 +182,7 @@ export default function TableCard({ table, onView, onEdit, onDelete, openMenu, s
 									? 'bg-surface-input dark:bg-surface-card text-text-primary dark:text-primary-400'
 									: 'hover:bg-surface-input dark:hover:bg-surface-card text-text-secondary dark:text-text-tertiary hover:text-text-primary dark:hover:text-primary-400'
 							)}
-							aria-haspopup="menu"
-							aria-expanded={isMenuOpen}
+							 aria-label="Open table actions menu"
 						>
 							<MoreVertical className="w-5 h-5" />
 						</button>
