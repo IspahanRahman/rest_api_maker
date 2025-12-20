@@ -3,6 +3,7 @@ import React from 'react'
 import { useForgotPasswordMutation } from '@/apis/mutation/auth/useForgotPasswordMutation'
 import { toast } from 'react-toastify'
 import { CustomSwal, DangerSwal } from '@/components/lib/swal-config/Swal'
+import Link from 'next/link'
 
 export default function ForgotPassword() {
     const { submit, isLoading, data, errors, setData } = useForgotPasswordMutation()
@@ -98,12 +99,12 @@ export default function ForgotPassword() {
         <div className="text-center">
             <p className="text-sm text-text-secondary">
                 Remember your password?{' '}
-                <a
+                <Link
                     href="/login"
                     className="font-semibold text-primary-500 hover:text-primary-600 transition-colors"
                 >
                     Back to Login
-                </a>
+                </Link>
             </p>
         </div>
     </div>

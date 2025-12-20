@@ -17,7 +17,7 @@ import ProjectDetailsModal from './components/ProjectDetailsModal'
 import Swal from 'sweetalert2'
 export default function CustomerProjects() {
 	const { data: projectData, isLoading, error, mutate } = useCustomerProjects();
-	const projects = projectData?.data || [];
+	const projects = useMemo(() => projectData?.data || [], [projectData]);
 
 	// UI State
 	const [searchQuery, setSearchQuery] = useState('')
@@ -46,6 +46,7 @@ export default function CustomerProjects() {
 	const { data: projectDetailData, isLoading: isDetailLoading } = useCustomerProjectDetail(
 		selectedProject?.id ? String(selectedProject.id) : ''
 	);
+
 
 	// Calculate statistics
 	const stats = useMemo(() => {
