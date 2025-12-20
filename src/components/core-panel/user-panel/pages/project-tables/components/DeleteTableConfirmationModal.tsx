@@ -26,7 +26,7 @@ export default function DeleteTableConfirmationModal({
 						<Trash2 className="w-5 h-5 text-error-600 dark:text-error-400" />
 					</div>
 					<p className="text-text-primary dark:text-primary-200">
-						Are you sure you want to delete the table <span className="font-semibold">"{tableName}"</span>?
+						Are you sure you want to delete the table <span className="font-semibold">&quot;{tableName}&quot;</span>?
 					</p>
 				</div>
 

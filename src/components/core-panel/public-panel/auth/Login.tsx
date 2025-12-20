@@ -204,7 +204,7 @@ const Login = () => {
 				{/* Sign Up Link */}
 				<div className="text-center">
 					<p className="text-sm text-text-secondary">
-						Don't have an account?{' '}
+						Don&apos;t have an account?{' '}
 						<Link
 							href={`/${locale}/register`}
 							className="font-semibold text-primary-500 hover:text-primary-600 transition-colors"

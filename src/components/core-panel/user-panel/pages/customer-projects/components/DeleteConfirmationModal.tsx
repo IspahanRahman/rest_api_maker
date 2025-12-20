@@ -32,7 +32,7 @@ export default function DeleteConfirmationModal({
                         <AlertTriangle className="w-5 h-5 text-error-600 dark:text-error-400" />
                     </div>
                     <p className="text-text-primary dark:text-error-200">
-                        Are you sure you want to delete <span className="font-semibold">"{projectName}"</span>?
+                        Are you sure you want to delete <span className="font-semibold">&quot;{projectName}&quot;</span>?
                     </p>
                 </div>
 

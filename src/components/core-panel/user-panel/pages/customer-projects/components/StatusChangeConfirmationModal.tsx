@@ -61,7 +61,7 @@ export default function StatusChangeConfirmationModal({
 						<AlertCircle className="w-5 h-5 text-primary-600 dark:text-primary-400" />
 					</div>
 					<p className="text-text-primary dark:text-primary-200">
-						Are you sure you want to change the status of <span className="font-semibold">"{projectName}"</span>?
+						Are you sure you want to change the status of <span className="font-semibold">&quot;{projectName}&quot;</span>?
 					</p>
 				</div>
 
