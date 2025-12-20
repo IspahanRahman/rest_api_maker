@@ -3,9 +3,13 @@ import React from 'react'
 import { useForgotPasswordMutation } from '@/apis/mutation/auth/useForgotPasswordMutation'
 import { toast } from 'react-toastify'
 import { CustomSwal, DangerSwal } from '@/components/lib/swal-config/Swal'
-import Link from 'next/link'
+import Link from 'next/link';
+import { useRouter, useParams } from 'next/navigation'
 
 export default function ForgotPassword() {
+	const router = useRouter();
+	const params = useParams();
+	const locale = params?.locale || 'en';
     const { submit, isLoading, data, errors, setData } = useForgotPasswordMutation()
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -100,7 +104,7 @@ export default function ForgotPassword() {
             <p className="text-sm text-text-secondary">
                 Remember your password?{' '}
                 <Link
-                    href="/login"
+                    href={`/${locale}/login`}
                     className="font-semibold text-primary-500 hover:text-primary-600 transition-colors"
                 >
                     Back to Login
