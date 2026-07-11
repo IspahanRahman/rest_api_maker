@@ -7,7 +7,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { FormInput } from '@/components/lib/ui-elements/form/FormInput'
 import { PasswordInput } from '@/components/lib/ui-elements/form/PasswordInput'
 import { LoadingButton } from '@/components/lib/ui-elements/button/LoadingButton'
-import { setAuthCookie } from '@/lib/cookies'
+import { setAuthCookies } from '@/lib/cookies'
 import { UserPlus, Mail, User, Lock, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link';
 import Swal from 'sweetalert2';
@@ -57,23 +57,35 @@ const Register = () => {
 			const result = await submit()
 
 			if (!result?.status) {
-				Swal.fire({
-					icon: 'error',
-					title: 'Registration Failed',
-					text: result?.errors[0]?.message || 'Registration failed',
-				});
+				// Handle validation errors from backend
+				if (result?.errors) {
+					const firstError = Object.values(result.errors)[0]
+					const errorMsg = Array.isArray(firstError) ? firstError[0] : 'Registration failed'
+					Swal.fire({
+						icon: 'error',
+						title: 'Registration Failed',
+						text: errorMsg,
+					})
+				} else {
+					Swal.fire({
+						icon: 'error',
+						title: 'Registration Failed',
+						text: result?.message || 'Registration failed',
+					})
+				}
 				return;
 			}
 
-			// If registration returns a token (auto-login)
-			if (result?.data?.token) {
-				const token = result.data.token
+			// If registration returns tokens (auto-login)
+			if (result?.data?.access_token) {
+				const { access_token, refresh_token } = result.data
 
-				// Store token in localStorage
-				localStorage.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, token)
+				// Store tokens in localStorage
+				localStorage.setItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN, access_token)
+				localStorage.setItem(LOCAL_STORAGE_KEYS.REFRESH_TOKEN, refresh_token)
 
-				// Store token in cookie for proxy/middleware
-				setAuthCookie(token, false)
+				// Store tokens in cookies for middleware route protection
+				setAuthCookies(access_token, refresh_token, false)
 
 				if (result.data.user) {
 					localStorage.setItem(
@@ -86,17 +98,42 @@ const Register = () => {
 				router.push(`/${locale}/dashboard`)
 			} else {
 				// If requires email verification
-				toast.success(
-					'Account created! Please check your email to verify your account.'
-				)
+				Swal.fire({
+					icon: 'success',
+					title: 'Account Created',
+					text: 'Please check your email to verify your account.',
+				})
 				router.push(`/${locale}/login`)
 			}
 		} catch (error: any) {
-			const errorMessage =
-				error?.response?.data?.message ||
-				error?.message ||
-				'An error occurred during registration'
-			toast.error(errorMessage)
+			const status = error?.response?.status
+			const message = error?.response?.data?.message || error?.message
+
+			// Handle specific backend error codes
+			if (status === 409) {
+				// Email already registered
+				Swal.fire({
+					icon: 'warning',
+					title: 'Email Already Registered',
+					text: message || 'An account with this email already exists. Please try logging in.',
+				})
+			} else if (status === 422) {
+				// Validation errors
+				const errors = error?.response?.data?.errors
+				if (errors) {
+					const firstError = Object.values(errors)[0]
+					const errorMsg = Array.isArray(firstError) ? firstError[0] : 'Validation failed'
+					Swal.fire({
+						icon: 'error',
+						title: 'Validation Error',
+						text: errorMsg,
+					})
+				} else {
+					toast.error(message || 'Validation failed')
+				}
+			} else {
+				toast.error(message || 'An error occurred during registration')
+			}
 		}
 	}
 

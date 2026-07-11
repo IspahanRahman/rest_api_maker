@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import createMiddleware from 'next-intl/middleware'
-import { routing } from './i18n/routing'
-import { LOCAL_STORAGE_KEYS } from './config/constants'
+import { routing } from './src/i18n/routing'
+import { LOCAL_STORAGE_KEYS } from './src/config/constants'
 
 // Create next-intl middleware
 const intlMiddleware = createMiddleware(routing)
@@ -46,7 +46,7 @@ function shouldSkipProxy(pathname: string): boolean {
 	)
 }
 
-export function proxy(req: NextRequest) {
+export function middleware(req: NextRequest) {
 	try {
 		const { pathname } = req.nextUrl
 		const host = req.headers.get('host')
@@ -87,7 +87,7 @@ export function proxy(req: NextRequest) {
 		// Pass through next-intl middleware for internationalization
 		return intlMiddleware(req)
 	} catch (error) {
-		console.error('Proxy error:', error)
+		console.error('Middleware error:', error)
 		// Fallback to next-intl middleware on error
 		return intlMiddleware(req)
 	}
