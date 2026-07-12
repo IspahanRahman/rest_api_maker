@@ -1,6 +1,6 @@
-import { login } from '@/apis/endpoints/auth_apis';
-import { useForm } from "@/hooks/useForm";
-import { LoginRequest } from '@/types/auth';
+import { login } from '@/apis/endpoints/auth_apis'
+import { useForm } from '@/hooks/useForm'
+import { LoginRequest } from '@/types/auth'
 
 export function useLoginMutation() {
 	const { submit, isLoading, data, errors, setData } = useForm<LoginRequest>(
@@ -20,5 +20,5 @@ export function useLoginMutation() {
 		data,
 		errors,
 		setData
-	};
+	}
 }

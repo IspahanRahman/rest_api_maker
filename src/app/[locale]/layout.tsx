@@ -20,7 +20,7 @@ interface LayoutProps {
 }
 
 export function generateStaticParams() {
-	return routing.locales.map((locale) => ({ locale }))
+	return routing.locales.map(locale => ({ locale }))
 }
 
 export default async function LocaleLayout({ children, params }: LayoutProps) {
@@ -34,16 +34,42 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
 
 	return (
 		<html lang={locale} suppressHydrationWarning>
-			<body>
+			<head>
+				<script
+					dangerouslySetInnerHTML={{
+						__html: `
+							(function() {
+								try {
+									var theme = localStorage.getItem('theme') || 'system';
+									var root = document.documentElement;
+									if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+										root.classList.add('dark');
+									} else {
+										root.classList.remove('dark');
+									}
+								} catch(e) {}
+							})();
+						`
+					}}
+				/>
+			</head>
+			<body className='no-transitions'>
+				<script
+					dangerouslySetInnerHTML={{
+						__html: `
+							setTimeout(function() {
+								document.body.classList.remove('no-transitions');
+							}, 100);
+						`
+					}}
+				/>
 				<ThemeProvider
 					attribute='class'
 					defaultTheme='system'
 					enableSystem={true}
 				>
 					<ToastProvider>
-						<NextIntlClientProvider
-							messages={JSON.parse(JSON.stringify(messages))}
-						>
+						<NextIntlClientProvider messages={messages}>
 							{children}
 						</NextIntlClientProvider>
 					</ToastProvider>

@@ -28,8 +28,18 @@ export interface AuthResponse {
 	status: boolean
 	message: string
 	data: {
-		token: string
+		access_token: string
+		refresh_token: string
 		user: AuthUser
+	}
+}
+
+export interface RefreshTokenResponse {
+	status: boolean
+	message: string
+	data: {
+		access_token: string
+		refresh_token: string
 	}
 }
 

@@ -1,35 +1,35 @@
 import { LOCAL_STORAGE_KEYS } from '@/config/constants'
-import { removeAuthCookie } from './cookies'
 
 /**
- * Logout user - clear all auth data
+ * Clear non-sensitive auth data from localStorage
+ * Auth tokens (access_token, refresh_token) are httpOnly cookies managed by the backend
  */
-export function logout(): void {
+function clearLocalAuthData(): void {
 	if (typeof window === 'undefined') return
-
-	// Clear localStorage
-	localStorage.removeItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN)
 	localStorage.removeItem(LOCAL_STORAGE_KEYS.USER_PROFILE)
 	localStorage.removeItem(LOCAL_STORAGE_KEYS.REMEMBER_ME)
+}
 
-	// Clear cookie
-	removeAuthCookie()
-
-	// Redirect to login
+/**
+ * Logout user - call backend endpoint to clear httpOnly cookies, then clear local data
+ */
+export async function logout(): Promise<void> {
+	try {
+		const axios = (await import('axios')).default
+		await axios.post(
+			`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/logout`,
+			{},
+			{ withCredentials: true }
+		)
+	} catch {
+		// Even if backend call fails, clear local data
+	}
+	clearLocalAuthData()
 	window.location.href = '/en/login'
 }
 
 /**
- * Check if user is authenticated
- * @returns True if user has a valid token, false otherwise
- */
-export function isAuthenticated(): boolean {
-	if (typeof window === 'undefined') return false
-	return !!localStorage.getItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN)
-}
-
-/**
- * Get the current user from localStorage
+ * Get the current user from localStorage (user_profile is non-sensitive display data)
  * @returns The user object or null if not found
  */
 export function getCurrentUser(): any | null {
@@ -44,13 +44,4 @@ export function getCurrentUser(): any | null {
 		console.error('Error parsing user profile:', error)
 		return null
 	}
-}
-
-/**
- * Get the auth token from localStorage
- * @returns The token string or null if not found
- */
-export function getAuthToken(): string | null {
-	if (typeof window === 'undefined') return null
-	return localStorage.getItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN)
 }

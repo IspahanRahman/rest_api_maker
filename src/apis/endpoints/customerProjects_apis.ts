@@ -4,5 +4,5 @@ export const PROJECTS_ENDPOINTS = {
 	UPDATE: (projectId: string) => `/customer/projects/${projectId}`,
 	DETAIL: (projectId: string) => `/customer/projects/${projectId}`,
 	DELETE: (projectId: string) => `/customer/projects/${projectId}`,
-	PATCH: (projectId: string) => `/customer/projects/${projectId}/status`,
+	PATCH: (projectId: string) => `/customer/projects/${projectId}/status`
 }

@@ -1,30 +1,12 @@
-import { LOCAL_STORAGE_KEYS } from '@/config/constants'
-
 /**
- * Set authentication token in cookie
- * @param token - The authentication token
- * @param rememberMe - Whether to remember the user (affects expiry time)
+ * Cookie utility functions.
+ * Auth tokens (access_token, refresh_token) are managed as httpOnly cookies by the backend.
+ * Frontend cannot read httpOnly cookies via JavaScript - this is by design for security.
  */
-export function setAuthCookie(token: string, rememberMe: boolean = false): void {
-	if (typeof window === 'undefined') return
-
-	const maxAge = rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7 // 30 days or 7 days
-	const isSecure = window.location.protocol === 'https:'
-
-	document.cookie = `${LOCAL_STORAGE_KEYS.AUTH_TOKEN}=${token}; path=/; max-age=${maxAge}; SameSite=Lax${isSecure ? '; Secure' : ''}`
-}
-
-/**
- * Remove authentication cookie
- */
-export function removeAuthCookie(): void {
-	if (typeof window === 'undefined') return
-
-	document.cookie = `${LOCAL_STORAGE_KEYS.AUTH_TOKEN}=; path=/; max-age=0`
-}
 
 /**
  * Get cookie value by name
+ * Note: httpOnly cookies cannot be read from JavaScript
  * @param name - The cookie name
  * @returns The cookie value or null if not found
  */
@@ -35,7 +17,8 @@ export function getCookie(name: string): string | null {
 	const parts = value.split(`; ${name}=`)
 
 	if (parts.length === 2) {
-		return parts.pop()?.split(';').shift() || null
+		const cookieValue = parts.pop()?.split(';').shift()
+		return cookieValue ? decodeURIComponent(cookieValue) : null
 	}
 
 	return null
@@ -43,6 +26,7 @@ export function getCookie(name: string): string | null {
 
 /**
  * Check if a cookie exists
+ * Note: httpOnly cookies cannot be detected from JavaScript
  * @param name - The cookie name
  * @returns True if cookie exists, false otherwise
  */

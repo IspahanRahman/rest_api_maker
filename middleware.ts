@@ -1,12 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import createMiddleware from 'next-intl/middleware'
-import { routing } from './i18n/routing'
+import { routing } from './src/i18n/routing'
+
+/**
+ * Authentication Middleware
+ *
+ * Uses httpOnly cookies for secure authentication:
+ * - access_token: Set by backend, httpOnly, secure, short-lived (15 min)
+ * - refresh_token: Set by backend, httpOnly, secure, long-lived (7 days)
+ *
+ * This middleware can read httpOnly cookies for routing decisions.
+ * Actual authentication security is enforced by the backend.
+ *
+ * See: HTTPONLY_COOKIES_BACKEND_REQUIREMENTS.md for backend setup
+ */
 
 // Create next-intl middleware
 const intlMiddleware = createMiddleware(routing)
 
 // Define route types
-const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password'] as const
+const PUBLIC_ROUTES = [
+	'/login',
+	'/register',
+	'/forgot-password',
+	'/reset-password'
+] as const
 const AUTH_ROUTES = ['/login', '/register'] as const // Routes that authenticated users shouldn't access
 
 /**
@@ -45,7 +63,7 @@ function shouldSkipProxy(pathname: string): boolean {
 	)
 }
 
-export function proxy(req: NextRequest) {
+export function middleware(req: NextRequest) {
 	try {
 		const { pathname } = req.nextUrl
 		const host = req.headers.get('host')
@@ -68,7 +86,8 @@ export function proxy(req: NextRequest) {
 			return NextResponse.redirect(`${origin}/en${pathname}`)
 		}
 
-		// Get access token from cookies
+		// Get access token from httpOnly cookie (set by backend)
+		// Cookie name MUST be 'access_token' (snake_case)
 		const token = req.cookies.get('access_token')?.value
 
 		// If user is authenticated and tries to access auth pages (login/register)
@@ -86,7 +105,7 @@ export function proxy(req: NextRequest) {
 		// Pass through next-intl middleware for internationalization
 		return intlMiddleware(req)
 	} catch (error) {
-		console.error('Proxy error:', error)
+		console.error('Middleware error:', error)
 		// Fallback to next-intl middleware on error
 		return intlMiddleware(req)
 	}
