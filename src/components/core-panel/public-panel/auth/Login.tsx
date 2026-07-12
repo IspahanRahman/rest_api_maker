@@ -7,7 +7,6 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { FormInput } from '@/components/lib/ui-elements/form/FormInput'
 import { PasswordInput } from '@/components/lib/ui-elements/form/PasswordInput'
 import { LoadingButton } from '@/components/lib/ui-elements/button/LoadingButton'
-import { setAccessTokenCookie } from '@/lib/cookies'
 import { LogIn, Mail, Lock, AlertTriangle, UserX } from 'lucide-react'
 import Link from 'next/link'
 import Swal from 'sweetalert2'
@@ -52,7 +51,7 @@ const Login = () => {
 		try {
 			const result = await submit()
 
-			if (!result?.status || !result?.data?.access_token) {
+			if (!result?.status) {
 				Swal.fire({
 					icon: 'error',
 					title: 'Login Failed',
@@ -61,16 +60,11 @@ const Login = () => {
 				return
 			}
 
-			const { access_token } = result.data
-
-			// Store access token in localStorage (for Authorization header)
-			// Set access_token cookie for Next.js middleware to read
-			// refresh_token is stored as httpOnly cookie by the backend
-			localStorage.setItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN, access_token)
-			setAccessTokenCookie(access_token)
+			// Access token is stored as httpOnly cookie by the backend
+			// No need to handle it on the frontend
 
 			// Store user profile if available
-			if (result.data.user) {
+			if (result.data?.user) {
 				localStorage.setItem(
 					LOCAL_STORAGE_KEYS.USER_PROFILE,
 					JSON.stringify(result.data.user)
@@ -83,12 +77,7 @@ const Login = () => {
 			}
 
 			toast.success('Login successful! Welcome back.')
-
-			// Small delay to ensure localStorage is fully committed
-			setTimeout(() => {
-				// Use window.location.href for hard redirect to ensure middleware picks up cookies
-				window.location.href = `/${locale}/dashboard`
-			}, 100)
+			router.push(`/${locale}/dashboard`)
 		} catch (error: any) {
 			const status = error?.response?.status
 			const message = error?.response?.data?.message || error?.message

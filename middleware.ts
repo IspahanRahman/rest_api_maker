@@ -1,13 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import createMiddleware from 'next-intl/middleware'
 import { routing } from './src/i18n/routing'
-import { LOCAL_STORAGE_KEYS } from './src/config/constants'
+
+/**
+ * Authentication Middleware
+ *
+ * Uses httpOnly cookies for secure authentication:
+ * - access_token: Set by backend, httpOnly, secure, short-lived (15 min)
+ * - refresh_token: Set by backend, httpOnly, secure, long-lived (7 days)
+ *
+ * This middleware can read httpOnly cookies for routing decisions.
+ * Actual authentication security is enforced by the backend.
+ *
+ * See: HTTPONLY_COOKIES_BACKEND_REQUIREMENTS.md for backend setup
+ */
 
 // Create next-intl middleware
 const intlMiddleware = createMiddleware(routing)
 
 // Define route types
-const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password'] as const
+const PUBLIC_ROUTES = [
+	'/login',
+	'/register',
+	'/forgot-password',
+	'/reset-password'
+] as const
 const AUTH_ROUTES = ['/login', '/register'] as const // Routes that authenticated users shouldn't access
 
 /**
@@ -69,8 +86,9 @@ export function middleware(req: NextRequest) {
 			return NextResponse.redirect(`${origin}/en${pathname}`)
 		}
 
-		// Get access token from cookies
-		const token = req.cookies.get(LOCAL_STORAGE_KEYS.ACCESS_TOKEN)?.value
+		// Get access token from httpOnly cookie (set by backend)
+		// Cookie name MUST be 'access_token' (snake_case)
+		const token = req.cookies.get('access_token')?.value
 
 		// If user is authenticated and tries to access auth pages (login/register)
 		// Redirect to dashboard
@@ -103,6 +121,6 @@ export const config = {
 		 * - favicon.ico (favicon file)
 		 * - public folder files
 		 */
-		'/((?!_next/static|_next/image|favicon.ico|.*\\..*|api).*)',
-	],
+		'/((?!_next/static|_next/image|favicon.ico|.*\\..*|api).*)'
+	]
 }

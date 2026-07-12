@@ -1,25 +1,8 @@
 /**
- * Set access_token cookie for Next.js middleware to read.
- * This is a non-httpOnly cookie (middleware runs server-side and can't access localStorage).
- * The access_token is a JWT - its security comes from short expiry and signature, not secrecy.
+ * Cookie utility functions.
+ * Auth tokens (access_token, refresh_token) are managed as httpOnly cookies by the backend.
+ * Frontend cannot read httpOnly cookies via JavaScript - this is by design for security.
  */
-export function setAccessTokenCookie(accessToken: string): void {
-	if (typeof window === 'undefined') return
-
-	const maxAge = 15 * 60 // 15 minutes (matches access token expiry)
-	const isSecure = window.location.protocol === 'https:'
-	const encodedToken = encodeURIComponent(accessToken)
-
-	document.cookie = `access_token=${encodedToken}; path=/; max-age=${maxAge}; SameSite=Lax${isSecure ? '; Secure' : ''}`
-}
-
-/**
- * Clear access_token cookie
- */
-export function clearAccessTokenCookie(): void {
-	if (typeof window === 'undefined') return
-	document.cookie = 'access_token=; path=/; max-age=0'
-}
 
 /**
  * Get cookie value by name
@@ -35,7 +18,6 @@ export function getCookie(name: string): string | null {
 
 	if (parts.length === 2) {
 		const cookieValue = parts.pop()?.split(';').shift()
-		// Decode the cookie value to handle special characters
 		return cookieValue ? decodeURIComponent(cookieValue) : null
 	}
 

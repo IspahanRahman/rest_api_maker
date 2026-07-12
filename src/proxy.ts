@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import createMiddleware from 'next-intl/middleware'
 import { routing } from './i18n/routing'
-import { LOCAL_STORAGE_KEYS } from './config/constants'
+
 
 // Create next-intl middleware
 const intlMiddleware = createMiddleware(routing)
@@ -70,7 +70,7 @@ export function proxy(req: NextRequest) {
 		}
 
 		// Get access token from cookies
-		const token = req.cookies.get(LOCAL_STORAGE_KEYS.ACCESS_TOKEN)?.value
+		const token = req.cookies.get('access_token')?.value
 
 		// If user is authenticated and tries to access auth pages (login/register)
 		// Redirect to dashboard

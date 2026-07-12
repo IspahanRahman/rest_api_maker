@@ -2,7 +2,6 @@ import axios from 'axios'
 import { ApiRequestConfig } from '@/types/config'
 import { LOCAL_STORAGE_KEYS } from '@/config/constants'
 import { env } from '@/config/env'
-import { setAccessTokenCookie, clearAccessTokenCookie } from '@/lib/cookies'
 
 // Validate environment variables on initialization
 if (!env.apiBaseUrl) {
@@ -22,19 +21,6 @@ const AxiosAPI = axios.create({
 	withCredentials: true
 })
 
-// Request interceptor - attach access token
-AxiosAPI.interceptors.request.use(config => {
-	const token =
-		typeof window !== 'undefined'
-			? window.localStorage.getItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN)
-			: null
-
-	if (token) {
-		config.headers.set('Authorization', `Bearer ${token}`)
-	}
-	return config
-})
-
 // Response interceptor - handle auth errors and token refresh
 let isRefreshing = false
 let failedQueue: Array<{
@@ -42,12 +28,12 @@ let failedQueue: Array<{
 	reject: (reason?: unknown) => void
 }> = []
 
-function processQueue(error: unknown, token: string | null = null) {
+function processQueue(error: unknown) {
 	failedQueue.forEach(({ resolve, reject }) => {
 		if (error) {
 			reject(error)
 		} else {
-			resolve(token)
+			resolve(undefined)
 		}
 	})
 	failedQueue = []
@@ -74,9 +60,8 @@ AxiosAPI.interceptors.response.use(
 		}
 
 		// Handle 401 Unauthorized - try token refresh
-		// Refresh token is in httpOnly cookie, sent automatically with withCredentials
+		// Both access_token and refresh_token are httpOnly cookies, sent automatically
 		if (status === 401 && !originalRequest._retry) {
-			// If already refreshing, queue this request
 			if (isRefreshing) {
 				return new Promise((resolve, reject) => {
 					failedQueue.push({ resolve, reject })
@@ -89,28 +74,16 @@ AxiosAPI.interceptors.response.use(
 			isRefreshing = true
 
 			try {
-				// Refresh token is sent automatically via httpOnly cookie
-				const { data } = await AxiosAPI.post('/auth/refresh')
+				// Refresh token cookie is sent automatically by the browser
+				// Backend sets new access_token and refresh_token as httpOnly cookies
+				await AxiosAPI.post('/auth/refresh')
 
-				if (data?.status && data?.data?.access_token) {
-					const newAccessToken = data.data.access_token
+				// Process queued requests
+				processQueue(null)
 
-					// Store new access token in localStorage and cookie
-					localStorage.setItem(
-						LOCAL_STORAGE_KEYS.ACCESS_TOKEN,
-						newAccessToken
-					)
-					setAccessTokenCookie(newAccessToken)
-
-					// Process queued requests
-					processQueue(null, newAccessToken)
-
-					return AxiosAPI(originalRequest)
-				} else {
-					throw new Error('Invalid refresh response')
-				}
+				return AxiosAPI(originalRequest)
 			} catch (refreshError) {
-				processQueue(refreshError, null)
+				processQueue(refreshError)
 				clearAuthAndRedirect(currentPath)
 				return Promise.reject(refreshError)
 			} finally {
@@ -136,25 +109,22 @@ function clearAuthAndRedirect(
 	currentPath: string,
 	reason: 'expired' | 'deactivated' = 'expired'
 ) {
-	localStorage.removeItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN)
+	// Clear non-sensitive local data
+	// Auth tokens are httpOnly cookies, cleared by backend logout endpoint
 	localStorage.removeItem(LOCAL_STORAGE_KEYS.USER_PROFILE)
 	localStorage.removeItem(LOCAL_STORAGE_KEYS.REMEMBER_ME)
-	clearAccessTokenCookie()
-	// Note: refresh_token is in httpOnly cookie, cleared by backend logout endpoint
 	const locale = currentPath.match(/^\/(en|bn)/)?.[1] || 'en'
 	window.location.href = `/${locale}/login?${reason}=1`
 }
 
 export const AxiosFetcher = async (args: string | ApiRequestConfig) => {
 	if (typeof args === 'string') {
-		// Check for export in URL
 		const isExport = args.includes('/export')
 		return await AxiosAPI.get(args, {
 			responseType: isExport ? 'arraybuffer' : 'json'
 		}).then(res => res.data)
 	} else {
 		const { data, ...rest } = args
-		// Detect export by URL or add `isExport: true` in custom config
 		const isExport =
 			rest.url?.includes('/export') || rest.responseType === 'arraybuffer'
 
