@@ -1,9 +1,9 @@
-// components/navigation/UserNavbar.jsx
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Menu, Bell, Moon, Sun } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Menu, Moon, Sun } from 'lucide-react'
 import Image from 'next/image'
+import { useTheme } from 'next-themes'
 import CustomIconButton from '@/components/lib/ui-elements/icon-button/CustomIconButton'
 
 interface UserNavbarProps {
@@ -11,56 +11,19 @@ interface UserNavbarProps {
 }
 
 export default function UserNavbar({ onMenuClick }: UserNavbarProps) {
-	const [theme, setTheme] = useState('system') // 'light' | 'dark' | 'system'
+	const { theme, setTheme } = useTheme()
 	const [mounted, setMounted] = useState(false)
 
-	// Apply theme IMMEDIATELY on mount to prevent flash
 	useEffect(() => {
 		setMounted(true)
-		const saved = localStorage.getItem('theme') || 'system'
-		setTheme(saved)
-
-		// Apply theme synchronously to prevent flash
-		const root = document.documentElement
-		const systemPrefersDark = window.matchMedia(
-			'(prefers-color-scheme: dark)'
-		).matches
-
-		if (saved === 'dark') {
-			root.classList.add('dark')
-		} else if (saved === 'light') {
-			root.classList.remove('dark')
-		} else {
-			systemPrefersDark
-				? root.classList.add('dark')
-				: root.classList.remove('dark')
-		}
 	}, [])
 
-	useEffect(() => {
-		if (!mounted) return
-		const root = document.documentElement
-		const systemPrefersDark = window.matchMedia(
-			'(prefers-color-scheme: dark)'
-		).matches
-
-		const enableDark = () => root.classList.add('dark')
-		const disableDark = () => root.classList.remove('dark')
-
-		if (theme === 'dark') enableDark()
-		else if (theme === 'light') disableDark()
-		else systemPrefersDark ? enableDark() : disableDark()
-
-		localStorage.setItem('theme', theme)
-	}, [theme, mounted])
-
-	// Toggle light/dark (cycles: light <-> dark; hold Alt to set 'system')
 	const toggleTheme = (e: React.MouseEvent<HTMLButtonElement>) => {
 		if (e?.altKey) {
 			setTheme('system')
 			return
 		}
-		setTheme(prev => (prev === 'dark' ? 'light' : 'dark'))
+		setTheme(theme === 'dark' ? 'light' : 'dark')
 	}
 
 	return (
@@ -70,7 +33,7 @@ export default function UserNavbar({ onMenuClick }: UserNavbarProps) {
 					{/* Mobile menu */}
 					<button
 						onClick={onMenuClick}
-						className='rounded-md p-2  focus:outline-none focus:ring md:hidden'
+						className='rounded-md p-2 focus:outline-none focus:ring md:hidden'
 						aria-label='Open sidebar'
 					>
 						<Menu className='h-5 w-5' />
@@ -88,48 +51,39 @@ export default function UserNavbar({ onMenuClick }: UserNavbarProps) {
 					</div>
 				</div>
 
-				{/* Right actions: theme switcher, notifications, avatar */}
+				{/* Right actions: theme switcher */}
 				<div className='flex items-center gap-3'>
-					{/* Theme switcher */}
 					<CustomIconButton
 						onClick={toggleTheme}
 						title={
-							theme === 'system'
-								? 'Theme: System (Alt+Click to keep system)'
-								: `Theme: ${
-										theme === 'dark' ? 'Dark' : 'Light'
-									} (Alt+Click to System)`
+							!mounted
+								? 'Toggle theme'
+								: theme === 'system'
+									? 'Theme: System (Alt+Click to keep system)'
+									: `Theme: ${
+											theme === 'dark' ? 'Dark' : 'Light'
+										} (Alt+Click to System)`
 						}
-						className='rounded-md p-2  focus:outline-none focus:ring cursor-pointer'
+						className='rounded-md p-2 focus:outline-none focus:ring cursor-pointer'
 						aria-label='Toggle theme'
 						typeMap={{ button: 'button' }}
 						iconMap={{}}
 						tone='default'
 						color='default'
 					>
-						{/* Show icon by computed theme */}
-						<ThemeIcon theme={theme} />
+						{mounted && (
+							<>
+								{theme === 'dark' ? (
+									<Sun className='h-5 w-5 text-foreground' />
+								) : (
+									<Moon className='h-5 w-5 text-foreground' />
+								)}
+							</>
+						)}
+						{!mounted && <Moon className='h-5 w-5 text-foreground' />}
 					</CustomIconButton>
 				</div>
 			</div>
 		</header>
 	)
-}
-
-function ThemeIcon({ theme }: { theme: string }) {
-	// For 'system', show Sun/Moon based on current media query (client-only)
-	const [isDark, setIsDark] = useState(false)
-
-	useEffect(() => {
-		const mq = window.matchMedia('(prefers-color-scheme: dark)')
-		const handler = () => setIsDark(mq.matches)
-		handler()
-		mq.addEventListener?.('change', handler)
-		return () => mq.removeEventListener?.('change', handler)
-	}, [])
-
-	if (theme === 'dark' || (theme === 'system' && isDark)) {
-		return <Sun className='h-5 w-5 text-foreground' />
-	}
-	return <Moon className='h-5 w-5 text-foreground' />
 }

@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useParams, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -42,12 +42,16 @@ const navItems: NavItem[] = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+  const [user, setUser] = useState<any>(null)
   const pathname = usePathname()
   const params = useParams()
   const router = useRouter()
   const locale = params?.locale || 'en'
   const { theme, setTheme } = useTheme()
-  const user = getCurrentUser()
+
+  useEffect(() => {
+    setUser(getCurrentUser())
+  }, [])
 
   const handleLogout = () => {
     logout()
@@ -79,8 +83,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <button
               onClick={() => setSidebarOpen(false)}
               className="lg:hidden p-2 rounded-lg hover:bg-surface-hover"
-			  type="button"
-			  aria-label="Close sidebar"
+              type="button"
+              aria-label="Close sidebar"
             >
               <X className="w-5 h-5" />
             </button>
@@ -146,7 +150,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <button
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden p-2 rounded-lg hover:bg-surface-hover"
-			  aria-label="Open sidebar"
+              aria-label="Open sidebar"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -187,7 +191,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <button
                 onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                 className="flex items-center gap-2 p-2 rounded-lg hover:bg-surface-hover cursor-pointer"
-				aria-label="User menu"
+                aria-label="User menu"
               >
                 <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
                   <User className="w-4 h-4 text-primary-600 dark:text-primary-400" />

@@ -69,9 +69,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
 					enableSystem={true}
 				>
 					<ToastProvider>
-						<NextIntlClientProvider
-							messages={JSON.parse(JSON.stringify(messages))}
-						>
+						<NextIntlClientProvider messages={messages}>
 							{children}
 						</NextIntlClientProvider>
 					</ToastProvider>

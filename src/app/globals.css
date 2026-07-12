@@ -15,9 +15,10 @@ html.dark {
 }
 
 /* Smooth transitions for theme changes */
-*,
-*::before,
-*::after {
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
 	transition:
 		background-color 200ms ease,
 		color 200ms ease,
@@ -58,6 +59,7 @@ html.dark {
 	--color-surface-modal: #ffffff;
 
 	--color-border-subtle: #e5e7eb;
+	--color-border-input: #d1d5db;
 
 	--color-text-primary-sem: #171717;
 	--color-text-secondary: #6b7280;
@@ -76,6 +78,7 @@ html.dark {
 	--color-surface-modal: #ffffff;
 
 	--color-border-subtle: #e5e7eb;
+	--color-border-input: #d1d5db;
 
 	--color-text-primary-sem: #171717;
 	--color-text-secondary: #6b7280;
@@ -94,6 +97,7 @@ html.dark {
 	--color-surface-modal: #1e1e2e;
 
 	--color-border-subtle: #333747;
+	--color-border-input: #3e4256;
 
 	--color-text-primary-sem: #ededed;
 	--color-text-secondary: #a1a6b3;
@@ -113,6 +117,7 @@ html.dark {
 		--color-surface-modal: #1e1e2e;
 
 		--color-border-subtle: #333747;
+		--color-border-input: #3e4256;
 
 		--color-text-primary-sem: #ededed;
 		--color-text-secondary: #a1a6b3;
@@ -132,6 +137,7 @@ html.dark {
 	--color-surface-modal: var(--color-surface-modal);
 
 	--color-border-subtle: var(--color-border-subtle);
+	--color-border-input: var(--color-border-input);
 
 	--color-text-primary-sem: var(--color-text-primary-sem);
 	--color-text-secondary: var(--color-text-secondary);
@@ -140,6 +146,8 @@ html.dark {
 	/* your legacy palette (unchanged) */
 	--color-bg_light: #f8f7fa;
 	--color-bg_secondary: #fbfafc;
+	--color-bg_dark: #0a0a0a;
+	--color-body_dark: #111318;
 	--color-event_management_bg: #f4f5fe;
 
 	--color-text-primary: #2f2b3d;
