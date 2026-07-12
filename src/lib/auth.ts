@@ -1,22 +1,33 @@
 import { LOCAL_STORAGE_KEYS } from '@/config/constants'
-import { removeAuthCookies } from './cookies'
+import { clearAccessTokenCookie } from './cookies'
 
 /**
- * Clear all auth data from localStorage and cookies
+ * Clear all auth data from localStorage and access_token cookie
  */
 function clearAuthData(): void {
 	if (typeof window === 'undefined') return
 	localStorage.removeItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN)
-	localStorage.removeItem(LOCAL_STORAGE_KEYS.REFRESH_TOKEN)
 	localStorage.removeItem(LOCAL_STORAGE_KEYS.USER_PROFILE)
 	localStorage.removeItem(LOCAL_STORAGE_KEYS.REMEMBER_ME)
-	removeAuthCookies()
+	clearAccessTokenCookie()
+	// Note: refresh_token is in httpOnly cookie, cleared by backend logout endpoint
 }
 
 /**
- * Logout user - clear all auth data and redirect to login
+ * Logout user - call backend endpoint to clear refresh token cookie, then clear local data
  */
-export function logout(): void {
+export async function logout(): Promise<void> {
+	try {
+		// Use raw axios to avoid interceptor loops and circular imports
+		const axios = (await import('axios')).default
+		await axios.post(
+			`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/logout`,
+			{},
+			{ withCredentials: true }
+		)
+	} catch {
+		// Even if backend call fails, clear local data
+	}
 	clearAuthData()
 	// Hard redirect to ensure middleware state is reset
 	window.location.href = '/en/login'
@@ -72,15 +83,6 @@ export function isAccessTokenExpired(): boolean {
 }
 
 /**
- * Check if refresh token exists
- * @returns True if refresh token is present in localStorage
- */
-export function hasRefreshToken(): boolean {
-	if (typeof window === 'undefined') return false
-	return !!localStorage.getItem(LOCAL_STORAGE_KEYS.REFRESH_TOKEN)
-}
-
-/**
  * Get the current user from localStorage
  * @returns The user object or null if not found
  */
@@ -108,19 +110,10 @@ export function getAccessToken(): string | null {
 }
 
 /**
- * Get the refresh token from localStorage
- * @returns The token string or null if not found
+ * Store access token in localStorage
+ * Note: refresh_token is stored as httpOnly cookie by the backend
  */
-export function getRefreshToken(): string | null {
-	if (typeof window === 'undefined') return null
-	return localStorage.getItem(LOCAL_STORAGE_KEYS.REFRESH_TOKEN)
-}
-
-/**
- * Store both tokens in localStorage
- */
-export function setTokens(accessToken: string, refreshToken: string): void {
+export function setAccessToken(accessToken: string): void {
 	if (typeof window === 'undefined') return
 	localStorage.setItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN, accessToken)
-	localStorage.setItem(LOCAL_STORAGE_KEYS.REFRESH_TOKEN, refreshToken)
 }

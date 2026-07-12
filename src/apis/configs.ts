@@ -2,6 +2,7 @@ import axios from 'axios'
 import { ApiRequestConfig } from '@/types/config'
 import { LOCAL_STORAGE_KEYS } from '@/config/constants'
 import { env } from '@/config/env'
+import { setAccessTokenCookie, clearAccessTokenCookie } from '@/lib/cookies'
 
 // Validate environment variables on initialization
 if (!env.apiBaseUrl) {
@@ -18,7 +19,7 @@ const AxiosAPI = axios.create({
 		Accept: 'application/json',
 		'Content-Type': 'application/json'
 	},
-	withCredentials: false
+	withCredentials: true
 })
 
 // Request interceptor - attach access token
@@ -73,17 +74,8 @@ AxiosAPI.interceptors.response.use(
 		}
 
 		// Handle 401 Unauthorized - try token refresh
+		// Refresh token is in httpOnly cookie, sent automatically with withCredentials
 		if (status === 401 && !originalRequest._retry) {
-			const refreshToken = localStorage.getItem(
-				LOCAL_STORAGE_KEYS.REFRESH_TOKEN
-			)
-
-			// No refresh token available - redirect to login
-			if (!refreshToken) {
-				clearAuthAndRedirect(currentPath)
-				return Promise.reject(error)
-			}
-
 			// If already refreshing, queue this request
 			if (isRefreshing) {
 				return new Promise((resolve, reject) => {
@@ -97,41 +89,19 @@ AxiosAPI.interceptors.response.use(
 			isRefreshing = true
 
 			try {
-				const { data } = await axios.post(
-					`${env.apiBaseUrl}/auth/refresh`,
-					{ refresh_token: refreshToken },
-					{ headers: { 'Content-Type': 'application/json' } }
-				)
+				// Refresh token is sent automatically via httpOnly cookie
+				const { data } = await AxiosAPI.post('/auth/refresh')
 
 				if (data?.status && data?.data?.access_token) {
 					const newAccessToken = data.data.access_token
-					const newRefreshToken =
-						data.data.refresh_token || refreshToken
 
-					// Store new tokens
+					// Store new access token in localStorage and cookie
 					localStorage.setItem(
 						LOCAL_STORAGE_KEYS.ACCESS_TOKEN,
 						newAccessToken
 					)
-					localStorage.setItem(
-						LOCAL_STORAGE_KEYS.REFRESH_TOKEN,
-						newRefreshToken
-					)
+					setAccessTokenCookie(newAccessToken)
 
-					// Update cookie with encoded tokens
-					const rememberMe =
-						localStorage.getItem(LOCAL_STORAGE_KEYS.REMEMBER_ME) ===
-						'true'
-					const maxAge = rememberMe
-						? 60 * 60 * 24 * 30
-						: 60 * 60 * 24 * 7
-					const isSecure = window.location.protocol === 'https:'
-					const encodedAccessToken =
-						encodeURIComponent(newAccessToken)
-					const encodedRefreshToken =
-						encodeURIComponent(newRefreshToken)
-					document.cookie = `${LOCAL_STORAGE_KEYS.ACCESS_TOKEN}=${encodedAccessToken}; path=/; max-age=${maxAge}; SameSite=Lax${isSecure ? '; Secure' : ''}`
-					document.cookie = `${LOCAL_STORAGE_KEYS.REFRESH_TOKEN}=${encodedRefreshToken}; path=/; max-age=${maxAge}; SameSite=Lax${isSecure ? '; Secure' : ''}`
 					// Process queued requests
 					processQueue(null, newAccessToken)
 
@@ -167,11 +137,10 @@ function clearAuthAndRedirect(
 	reason: 'expired' | 'deactivated' = 'expired'
 ) {
 	localStorage.removeItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN)
-	localStorage.removeItem(LOCAL_STORAGE_KEYS.REFRESH_TOKEN)
 	localStorage.removeItem(LOCAL_STORAGE_KEYS.USER_PROFILE)
 	localStorage.removeItem(LOCAL_STORAGE_KEYS.REMEMBER_ME)
-	document.cookie = `${LOCAL_STORAGE_KEYS.ACCESS_TOKEN}=; path=/; max-age=0`
-	document.cookie = `${LOCAL_STORAGE_KEYS.REFRESH_TOKEN}=; path=/; max-age=0`
+	clearAccessTokenCookie()
+	// Note: refresh_token is in httpOnly cookie, cleared by backend logout endpoint
 	const locale = currentPath.match(/^\/(en|bn)/)?.[1] || 'en'
 	window.location.href = `/${locale}/login?${reason}=1`
 }

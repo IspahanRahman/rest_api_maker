@@ -7,7 +7,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { FormInput } from '@/components/lib/ui-elements/form/FormInput'
 import { PasswordInput } from '@/components/lib/ui-elements/form/PasswordInput'
 import { LoadingButton } from '@/components/lib/ui-elements/button/LoadingButton'
-import { setAuthCookies } from '@/lib/cookies'
+import { setAccessTokenCookie } from '@/lib/cookies'
 import { UserPlus, Mail, User, Lock, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link';
 import Swal from 'sweetalert2';
@@ -78,14 +78,13 @@ const Register = () => {
 
 			// If registration returns tokens (auto-login)
 			if (result?.data?.access_token) {
-				const { access_token, refresh_token } = result.data
+				const { access_token } = result.data
 
-				// Store tokens in localStorage
+				// Store access token in localStorage (for Authorization header)
+				// Set access_token cookie for Next.js middleware to read
+				// refresh_token is stored as httpOnly cookie by the backend
 				localStorage.setItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN, access_token)
-				localStorage.setItem(LOCAL_STORAGE_KEYS.REFRESH_TOKEN, refresh_token)
-
-				// Store tokens in cookies for middleware route protection
-				setAuthCookies(access_token, refresh_token, false)
+				setAccessTokenCookie(access_token)
 
 				if (result.data.user) {
 					localStorage.setItem(

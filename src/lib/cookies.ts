@@ -1,41 +1,29 @@
-import { LOCAL_STORAGE_KEYS } from '@/config/constants'
-
 /**
- * Set authentication tokens in cookies
- * @param accessToken - The access token
- * @param refreshToken - The refresh token
- * @param rememberMe - Whether to remember the user (affects expiry time)
+ * Set access_token cookie for Next.js middleware to read.
+ * This is a non-httpOnly cookie (middleware runs server-side and can't access localStorage).
+ * The access_token is a JWT - its security comes from short expiry and signature, not secrecy.
  */
-export function setAuthCookies(
-	accessToken: string,
-	refreshToken: string,
-	rememberMe: boolean = false
-): void {
+export function setAccessTokenCookie(accessToken: string): void {
 	if (typeof window === 'undefined') return
 
-	const maxAge = rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7 // 30 days or 7 days
+	const maxAge = 15 * 60 // 15 minutes (matches access token expiry)
 	const isSecure = window.location.protocol === 'https:'
+	const encodedToken = encodeURIComponent(accessToken)
 
-	// Encode tokens to handle special characters safely
-	const encodedAccessToken = encodeURIComponent(accessToken)
-	const encodedRefreshToken = encodeURIComponent(refreshToken)
-
-	document.cookie = `${LOCAL_STORAGE_KEYS.ACCESS_TOKEN}=${encodedAccessToken}; path=/; max-age=${maxAge}; SameSite=Lax${isSecure ? '; Secure' : ''}`
-	document.cookie = `${LOCAL_STORAGE_KEYS.REFRESH_TOKEN}=${encodedRefreshToken}; path=/; max-age=${maxAge}; SameSite=Lax${isSecure ? '; Secure' : ''}`
+	document.cookie = `access_token=${encodedToken}; path=/; max-age=${maxAge}; SameSite=Lax${isSecure ? '; Secure' : ''}`
 }
 
 /**
- * Remove authentication cookies
+ * Clear access_token cookie
  */
-export function removeAuthCookies(): void {
+export function clearAccessTokenCookie(): void {
 	if (typeof window === 'undefined') return
-
-	document.cookie = `${LOCAL_STORAGE_KEYS.ACCESS_TOKEN}=; path=/; max-age=0`
-	document.cookie = `${LOCAL_STORAGE_KEYS.REFRESH_TOKEN}=; path=/; max-age=0`
+	document.cookie = 'access_token=; path=/; max-age=0'
 }
 
 /**
  * Get cookie value by name
+ * Note: httpOnly cookies cannot be read from JavaScript
  * @param name - The cookie name
  * @returns The cookie value or null if not found
  */
@@ -56,6 +44,7 @@ export function getCookie(name: string): string | null {
 
 /**
  * Check if a cookie exists
+ * Note: httpOnly cookies cannot be detected from JavaScript
  * @param name - The cookie name
  * @returns True if cookie exists, false otherwise
  */

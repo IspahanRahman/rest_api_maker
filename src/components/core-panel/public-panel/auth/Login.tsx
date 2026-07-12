@@ -7,7 +7,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { FormInput } from '@/components/lib/ui-elements/form/FormInput'
 import { PasswordInput } from '@/components/lib/ui-elements/form/PasswordInput'
 import { LoadingButton } from '@/components/lib/ui-elements/button/LoadingButton'
-import { setAuthCookies } from '@/lib/cookies'
+import { setAccessTokenCookie } from '@/lib/cookies'
 import { LogIn, Mail, Lock, AlertTriangle, UserX } from 'lucide-react'
 import Link from 'next/link'
 import Swal from 'sweetalert2'
@@ -61,27 +61,13 @@ const Login = () => {
 				return
 			}
 
-			const { access_token, refresh_token } = result.data
+			const { access_token } = result.data
 
-			// Store tokens in localStorage
+			// Store access token in localStorage (for Authorization header)
+			// Set access_token cookie for Next.js middleware to read
+			// refresh_token is stored as httpOnly cookie by the backend
 			localStorage.setItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN, access_token)
-			localStorage.setItem(
-				LOCAL_STORAGE_KEYS.REFRESH_TOKEN,
-				refresh_token
-			)
-
-			// Store tokens in cookies for middleware route protection
-			setAuthCookies(access_token, refresh_token, rememberMe)
-
-			// Debug: Verify tokens are set (remove in production)
-			console.log('🔐 Auth tokens set:', {
-				localStorage: !!localStorage.getItem(
-					LOCAL_STORAGE_KEYS.ACCESS_TOKEN
-				),
-				cookies: document.cookie.includes(
-					LOCAL_STORAGE_KEYS.ACCESS_TOKEN
-				)
-			})
+			setAccessTokenCookie(access_token)
 
 			// Store user profile if available
 			if (result.data.user) {
@@ -98,7 +84,7 @@ const Login = () => {
 
 			toast.success('Login successful! Welcome back.')
 
-			// Small delay to ensure cookies and localStorage are fully committed
+			// Small delay to ensure localStorage is fully committed
 			setTimeout(() => {
 				// Use window.location.href for hard redirect to ensure middleware picks up cookies
 				window.location.href = `/${locale}/dashboard`
