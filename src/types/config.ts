@@ -3,8 +3,8 @@ import { SWRConfiguration } from 'swr'
 
 export interface ApiRequestConfig extends AxiosRequestConfig {
 	url: string
-	method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
-	data?: object | FormData,
+	method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
+	data?: object | FormData
 }
 
 export interface SWRConfig extends SWRConfiguration {
@@ -19,11 +19,11 @@ export type TResponse<T> = {
 export type TResponsePagination<T> = {
 	message: string
 	data: T extends Array<unknown>
-	  ? { current_page: number; data: T } & PaginationMeta
-	  : T
-  }
+		? { current_page: number; data: T } & PaginationMeta
+		: T
+}
 
-  type PaginationMeta = {
+type PaginationMeta = {
 	first_page_url: string
 	from: number
 	last_page: number
@@ -35,9 +35,9 @@ export type TResponsePagination<T> = {
 	prev_page_url: string | null
 	to: number
 	total: number
-  }
+}
 
-  export interface Paginated<T> {
+export interface Paginated<T> {
 	current_page: number
 	data: T[]
 	total: number
@@ -46,17 +46,17 @@ export type TResponsePagination<T> = {
 }
 
 export type PaginatedEmployeeResponse<T> = {
-	current_page: number;
-	data: T[];
-	first_page_url: string;
-	from: number;
-	last_page: number;
-	last_page_url: string;
-	links: { url: string | null; label: string; active: boolean }[];
-	next_page_url: string | null;
-	path: string;
-	per_page: number;
-	prev_page_url: string | null;
-	to: number;
-	total: number;
-  };
+	current_page: number
+	data: T[]
+	first_page_url: string
+	from: number
+	last_page: number
+	last_page_url: string
+	links: { url: string | null; label: string; active: boolean }[]
+	next_page_url: string | null
+	path: string
+	per_page: number
+	prev_page_url: string | null
+	to: number
+	total: number
+}

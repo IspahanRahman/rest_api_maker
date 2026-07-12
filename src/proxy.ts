@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import createMiddleware from 'next-intl/middleware'
 import { routing } from './i18n/routing'
 
-
 // Create next-intl middleware
 const intlMiddleware = createMiddleware(routing)
 
@@ -103,6 +102,6 @@ export const config = {
 		 * - favicon.ico (favicon file)
 		 * - public folder files
 		 */
-		'/((?!_next/static|_next/image|favicon.ico|.*\\..*|api).*)',
-	],
+		'/((?!_next/static|_next/image|favicon.ico|.*\\..*|api).*)'
+	]
 }

@@ -12,9 +12,17 @@ export default function Loading() {
 					{/* Nav items */}
 					<div className='flex-1 px-4 py-6 space-y-2'>
 						{Array.from({ length: 6 }).map((_, i) => (
-							<div key={i} className='flex items-center gap-3 px-4 py-3 rounded-lg'>
+							<div
+								key={i}
+								className='flex items-center gap-3 px-4 py-3 rounded-lg'
+							>
 								<div className='w-5 h-5 rounded bg-surface-hover' />
-								<div className='h-4 rounded bg-surface-hover' style={{ width: `${60 + Math.random() * 30}%` }} />
+								<div
+									className='h-4 rounded bg-surface-hover'
+									style={{
+										width: `${60 + Math.random() * 30}%`
+									}}
+								/>
 							</div>
 						))}
 					</div>
@@ -52,7 +60,10 @@ export default function Loading() {
 					<div className='h-4 w-64 rounded bg-surface-hover' />
 					<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
 						{Array.from({ length: 4 }).map((_, i) => (
-							<div key={i} className='h-28 rounded-xl bg-surface-card border border-border-subtle' />
+							<div
+								key={i}
+								className='h-28 rounded-xl bg-surface-card border border-border-subtle'
+							/>
 						))}
 					</div>
 					<div className='h-64 rounded-xl bg-surface-card border border-border-subtle' />

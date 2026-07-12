@@ -80,7 +80,9 @@ export default function UserNavbar({ onMenuClick }: UserNavbarProps) {
 								)}
 							</>
 						)}
-						{!mounted && <Moon className='h-5 w-5 text-foreground' />}
+						{!mounted && (
+							<Moon className='h-5 w-5 text-foreground' />
+						)}
 					</CustomIconButton>
 				</div>
 			</div>

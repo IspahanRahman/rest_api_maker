@@ -1,4 +1,5 @@
-export type PlanTerm = 'monthly' | 'quarterly' | 'half_yearly' | 'yearly' | 'custom'
+export type PlanTerm =
+	'monthly' | 'quarterly' | 'half_yearly' | 'yearly' | 'custom'
 
 export interface PackagePlan {
 	id: string
@@ -23,6 +24,6 @@ export interface PackageType {
 	plans: PackagePlan[]
 }
 
-export interface PackageBuyRequest{
-	package_plan_id: string;
+export interface PackageBuyRequest {
+	package_plan_id: string
 }

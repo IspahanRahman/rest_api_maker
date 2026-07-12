@@ -1,26 +1,19 @@
-import { useForm } from '@/hooks/useForm';
-import { forgotPassword } from '@/apis/endpoints/auth_apis';
+import { useForm } from '@/hooks/useForm'
+import { forgotPassword } from '@/apis/endpoints/auth_apis'
 
 interface ForgotPasswordData {
-	email: string;
+	email: string
 }
 
 export function useForgotPasswordMutation() {
-	const {
-		submit,
-		isLoading,
-		data,
-		errors,
-		setData,
-		register,
-		responseData
-	} = useForm<ForgotPasswordData>(
-		forgotPassword, // API endpoint URL
-		{
-			email: { value: '', validation: 'required|email' }
-		},
-		{ method: 'POST' }
-	);
+	const { submit, isLoading, data, errors, setData, register, responseData } =
+		useForm<ForgotPasswordData>(
+			forgotPassword, // API endpoint URL
+			{
+				email: { value: '', validation: 'required|email' }
+			},
+			{ method: 'POST' }
+		)
 
 	return {
 		submit,
@@ -30,5 +23,5 @@ export function useForgotPasswordMutation() {
 		setData,
 		register,
 		responseData
-	};
+	}
 }

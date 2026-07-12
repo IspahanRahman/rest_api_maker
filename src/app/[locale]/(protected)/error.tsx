@@ -25,7 +25,8 @@ export default function Error({
 						Something went wrong
 					</h2>
 					<p className='text-text-secondary'>
-						{error.message || 'An unexpected error occurred. Please try again.'}
+						{error.message ||
+							'An unexpected error occurred. Please try again.'}
 					</p>
 				</div>
 				<div className='flex items-center justify-center gap-3'>

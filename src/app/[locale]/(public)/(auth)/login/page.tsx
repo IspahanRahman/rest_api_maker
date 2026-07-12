@@ -1,13 +1,13 @@
-import Login from "@/components/core-panel/public-panel/auth/Login";
+import Login from '@/components/core-panel/public-panel/auth/Login'
 
-import React from "react";
+import React from 'react'
 
 const LoginPage = () => {
-  return (
-    <div>
-      <Login />
-    </div>
-  );
-};
+	return (
+		<div>
+			<Login />
+		</div>
+	)
+}
 
-export default LoginPage;
+export default LoginPage

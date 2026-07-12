@@ -1,15 +1,15 @@
 // app/layout.tsx
-import './globals.css';
+import './globals.css'
 
 export const metadata = {
-  title: 'Rest Api Maker',
-  description: 'Your app description',
-};
+	title: 'Rest Api Maker',
+	description: 'Your app description'
+}
 
 export default function RootLayout({
-  children,
+	children
 }: {
-  children: React.ReactNode;
+	children: React.ReactNode
 }) {
-  return children;
+	return children
 }

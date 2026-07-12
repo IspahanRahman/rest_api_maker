@@ -4,5 +4,5 @@ export const TABLES_ENDPOINTS = {
 	DETAIL: (tableId: string) => `/customer/project-table/${tableId}`,
 	UPDATE: (tableId: string) => `/customer/project-table/${tableId}`,
 	DELETE: (tableId: string) => `/customer/project-table/${tableId}`,
-	COLUMNS: (tableId: string) => `/customer/project-table/${tableId}/columns`,
+	COLUMNS: (tableId: string) => `/customer/project-table/${tableId}/columns`
 }

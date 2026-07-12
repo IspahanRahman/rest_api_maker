@@ -1,6 +1,12 @@
 'use client'
 import React, { useState, useMemo } from 'react'
-import { Plus, AlertTriangle, Loader2, Database, Table as TableIcon } from 'lucide-react'
+import {
+	Plus,
+	AlertTriangle,
+	Loader2,
+	Database,
+	Table as TableIcon
+} from 'lucide-react'
 import { useCustomerProjects } from '@/apis/query/customerProjects/useCutomerProjects'
 import { useProjectTables } from '@/apis/query/projectTables/useProjectTables'
 import { useDeleteTableMutation } from '@/apis/mutation/projectTable/useDeleteTableMutation'
@@ -9,15 +15,25 @@ import { ProjectTable } from '@/types/project-table'
 import { Project } from '@/types/customer-project'
 import Select from '@/components/common/Select'
 import Swal from 'sweetalert2'
-import { TableCard, CreateTableModal, EditTableModal, DeleteTableConfirmationModal, TableDetailsModal, TableStats } from './components';
+import {
+	TableCard,
+	CreateTableModal,
+	EditTableModal,
+	DeleteTableConfirmationModal,
+	TableDetailsModal,
+	TableStats
+} from './components'
 export default function ProjectTables() {
-	const { data: projectData, isLoading: projectsLoading } = useCustomerProjects()
+	const { data: projectData, isLoading: projectsLoading } =
+		useCustomerProjects()
 	const projects = projectData?.data || []
 
 	// State
 	const [selectedProjectId, setSelectedProjectId] = useState<string>('')
 	const [searchQuery, setSearchQuery] = useState('')
-	const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+	const [statusFilter, setStatusFilter] = useState<
+		'all' | 'active' | 'inactive'
+	>('all')
 	const [openMenu, setOpenMenu] = useState<string | null>(null)
 
 	// Modal State
@@ -25,13 +41,20 @@ export default function ProjectTables() {
 	const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
 	const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
-	const [selectedTable, setSelectedTable] = useState<ProjectTable | null>(null)
+	const [selectedTable, setSelectedTable] = useState<ProjectTable | null>(
+		null
+	)
 
 	// Operation State
 	const [deletingTableId, setDeletingTableId] = useState<string | null>(null)
 
 	// Fetch tables for selected project
-	const { data: tablesData, isLoading: tablesLoading, error, mutate } = useProjectTables(selectedProjectId)
+	const {
+		data: tablesData,
+		isLoading: tablesLoading,
+		error,
+		mutate
+	} = useProjectTables(selectedProjectId)
 	const tables = useMemo(() => {
 		if (!tablesData?.data) return []
 		return tablesData.data.map((table: any) => {
@@ -65,7 +88,9 @@ export default function ProjectTables() {
 							endpointData = JSON.parse(endpointData)
 						}
 					}
-					parsedEndpoints = Array.isArray(endpointData) ? endpointData : []
+					parsedEndpoints = Array.isArray(endpointData)
+						? endpointData
+						: []
 				}
 			} catch (e) {
 				console.error('Error parsing api_endpoints:', e)
@@ -93,8 +118,8 @@ export default function ProjectTables() {
 					precision: col.precision,
 					scale: col.scale,
 					createdAt: table.createdAt,
-					updatedAt: table.updatedAt,
-				})),
+					updatedAt: table.updatedAt
+				}))
 			}
 		})
 	}, [tablesData?.data])
@@ -107,9 +132,15 @@ export default function ProjectTables() {
 
 		return {
 			total: tables.length,
-			active: tables.filter((t: ProjectTable) => t.status === 'active').length,
-			inactive: tables.filter((t: ProjectTable) => t.status === 'inactive').length,
-			totalRows: tables.reduce((sum: number, t: ProjectTable) => sum + (t.row_count || 0), 0),
+			active: tables.filter((t: ProjectTable) => t.status === 'active')
+				.length,
+			inactive: tables.filter(
+				(t: ProjectTable) => t.status === 'inactive'
+			).length,
+			totalRows: tables.reduce(
+				(sum: number, t: ProjectTable) => sum + (t.row_count || 0),
+				0
+			)
 		}
 	}, [tables])
 
@@ -123,14 +154,20 @@ export default function ProjectTables() {
 		if (searchQuery) {
 			filtered = filtered.filter(
 				(t: ProjectTable) =>
-					(t.name || t.table_name)?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-					t.description?.toLowerCase().includes(searchQuery.toLowerCase())
+					(t.name || t.table_name)
+						?.toLowerCase()
+						.includes(searchQuery.toLowerCase()) ||
+					t.description
+						?.toLowerCase()
+						.includes(searchQuery.toLowerCase())
 			)
 		}
 
 		// Apply status filter
 		if (statusFilter !== 'all') {
-			filtered = filtered.filter((t: ProjectTable) => t.status === statusFilter)
+			filtered = filtered.filter(
+				(t: ProjectTable) => t.status === statusFilter
+			)
 		}
 
 		return filtered
@@ -139,7 +176,7 @@ export default function ProjectTables() {
 	// Project options for select
 	const projectOptions = projects.map((p: Project) => ({
 		value: p.id,
-		label: `${p.name} (${p.db_name})`,
+		label: `${p.name} (${p.db_name})`
 	}))
 
 	// Handlers
@@ -180,7 +217,7 @@ export default function ProjectTables() {
 				Swal.fire({
 					icon: 'error',
 					title: 'Delete Failed',
-					text: response?.message || 'Failed to delete table',
+					text: response?.message || 'Failed to delete table'
 				})
 				return
 			}
@@ -189,11 +226,14 @@ export default function ProjectTables() {
 			setSelectedTable(null)
 			mutate()
 		} catch (error: any) {
-			const errorMessage = error?.response?.data?.message || error?.message || 'Failed to delete table'
+			const errorMessage =
+				error?.response?.data?.message ||
+				error?.message ||
+				'Failed to delete table'
 			Swal.fire({
 				icon: 'error',
 				title: 'Delete Failed',
-				text: errorMessage,
+				text: errorMessage
 			})
 		} finally {
 			setDeletingTableId(null)
@@ -207,49 +247,57 @@ export default function ProjectTables() {
 	// Loading State
 	if (projectsLoading) {
 		return (
-			<div className="min-h-screen bg-surface-primary p-6 flex items-center justify-center">
-				<div className="flex flex-col items-center justify-center py-20">
-					<Loader2 className="w-12 h-12 text-primary-600 dark:text-primary-400 animate-spin mb-4" />
-					<p className="text-text-secondary">Loading projects...</p>
+			<div className='min-h-screen bg-surface-primary p-6 flex items-center justify-center'>
+				<div className='flex flex-col items-center justify-center py-20'>
+					<Loader2 className='w-12 h-12 text-primary-600 dark:text-primary-400 animate-spin mb-4' />
+					<p className='text-text-secondary'>Loading projects...</p>
 				</div>
 			</div>
 		)
 	}
 
 	return (
-		<div className="min-h-screen bg-surface-primary">
-			<div className="max-w-7xl mx-auto space-y-6">
+		<div className='min-h-screen bg-surface-primary'>
+			<div className='max-w-7xl mx-auto space-y-6'>
 				{/* Header */}
-				<div className="flex flex-col gap-4">
-					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+				<div className='flex flex-col gap-4'>
+					<div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
 						<div>
-							<h1 className="text-3xl font-bold text-foreground mb-2">Project Tables</h1>
-							<p className="text-text-secondary">Manage database tables for your projects</p>
+							<h1 className='text-3xl font-bold text-foreground mb-2'>
+								Project Tables
+							</h1>
+							<p className='text-text-secondary'>
+								Manage database tables for your projects
+							</p>
 						</div>
 						<button
 							onClick={handleCreateTable}
 							disabled={!selectedProjectId}
-							className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700
+							className='inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700
 								text-white rounded-lg font-medium shadow-sm hover:shadow-md transition-all
-								disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+								disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
 						>
-							<Plus className="w-5 h-5" />
+							<Plus className='w-5 h-5' />
 							Create Table
 						</button>
 					</div>
 
 					{/* Project Selector */}
-					<div className="bg-surface-card border border-border-subtle rounded-xl p-6">
-						<div className="flex items-center gap-3 mb-4">
-							<Database className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-							<h2 className="text-lg font-semibold text-foreground">Select Project</h2>
+					<div className='bg-surface-card border border-border-subtle rounded-xl p-6'>
+						<div className='flex items-center gap-3 mb-4'>
+							<Database className='w-5 h-5 text-primary-600 dark:text-primary-400' />
+							<h2 className='text-lg font-semibold text-foreground'>
+								Select Project
+							</h2>
 						</div>
 						<Select
 							value={selectedProjectId}
-							onChange={(value) => setSelectedProjectId(value as string)}
+							onChange={value =>
+								setSelectedProjectId(value as string)
+							}
 							options={projectOptions}
-							placeholder="Choose a project to view its tables..."
-							className="max-w-md"
+							placeholder='Choose a project to view its tables...'
+							className='max-w-md'
 						/>
 					</div>
 				</div>
@@ -265,18 +313,20 @@ export default function ProjectTables() {
 						/>
 
 						{/* Search and Filters */}
-						<div className="bg-surface-card border border-border-subtle rounded-xl p-4">
-							<div className="flex flex-col md:flex-row gap-4">
+						<div className='bg-surface-card border border-border-subtle rounded-xl p-4'>
+							<div className='flex flex-col md:flex-row gap-4'>
 								<input
-									type="text"
+									type='text'
 									value={searchQuery}
-									onChange={(e) => setSearchQuery(e.target.value)}
-									placeholder="Search tables..."
-									className="flex-1 px-4 py-2.5 bg-surface-input border border-border-input rounded-lg
+									onChange={e =>
+										setSearchQuery(e.target.value)
+									}
+									placeholder='Search tables...'
+									className='flex-1 px-4 py-2.5 bg-surface-input border border-border-input rounded-lg
 										text-foreground placeholder:text-text-tertiary
-										focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+										focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent'
 								/>
-								<div className="flex gap-2">
+								<div className='flex gap-2'>
 									<button
 										onClick={() => setStatusFilter('all')}
 										className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -288,7 +338,9 @@ export default function ProjectTables() {
 										All
 									</button>
 									<button
-										onClick={() => setStatusFilter('active')}
+										onClick={() =>
+											setStatusFilter('active')
+										}
 										className={`px-4 py-2 rounded-lg font-medium transition-colors ${
 											statusFilter === 'active'
 												? 'bg-success-600 text-white'
@@ -298,7 +350,9 @@ export default function ProjectTables() {
 										Active
 									</button>
 									<button
-										onClick={() => setStatusFilter('inactive')}
+										onClick={() =>
+											setStatusFilter('inactive')
+										}
 										className={`px-4 py-2 rounded-lg font-medium transition-colors ${
 											statusFilter === 'inactive'
 												? 'bg-gray-600 text-white'
@@ -313,34 +367,41 @@ export default function ProjectTables() {
 
 						{/* Tables List */}
 						{tablesLoading ? (
-							<div className="flex flex-col items-center justify-center py-20">
-								<Loader2 className="w-8 h-8 text-primary-600 dark:text-primary-400 animate-spin mb-4" />
-								<p className="text-text-secondary">Loading tables...</p>
+							<div className='flex flex-col items-center justify-center py-20'>
+								<Loader2 className='w-8 h-8 text-primary-600 dark:text-primary-400 animate-spin mb-4' />
+								<p className='text-text-secondary'>
+									Loading tables...
+								</p>
 							</div>
 						) : error ? (
-							<div className="bg-error-50 dark:bg-error-950/20 border border-error-200 dark:border-error-900 rounded-lg p-6 text-center">
-								<AlertTriangle className="w-12 h-12 text-error-600 dark:text-error-400 mx-auto mb-3" />
-								<h3 className="text-lg font-semibold text-error-900 dark:text-error-100 mb-2">Failed to load tables</h3>
-								<p className="text-error-700 dark:text-error-300 mb-4">
-									{error.message || 'Please try again later or contact support'}
+							<div className='bg-error-50 dark:bg-error-950/20 border border-error-200 dark:border-error-900 rounded-lg p-6 text-center'>
+								<AlertTriangle className='w-12 h-12 text-error-600 dark:text-error-400 mx-auto mb-3' />
+								<h3 className='text-lg font-semibold text-error-900 dark:text-error-100 mb-2'>
+									Failed to load tables
+								</h3>
+								<p className='text-error-700 dark:text-error-300 mb-4'>
+									{error.message ||
+										'Please try again later or contact support'}
 								</p>
 								<button
 									onClick={() => mutate()}
-									className="inline-flex items-center gap-2 px-6 py-2 bg-error-600 hover:bg-error-700 text-white rounded-lg transition-colors"
+									className='inline-flex items-center gap-2 px-6 py-2 bg-error-600 hover:bg-error-700 text-white rounded-lg transition-colors'
 								>
 									Retry
 								</button>
 							</div>
 						) : filteredTables.length === 0 ? (
-							<div className="bg-surface-card border border-border-subtle rounded-xl p-12 text-center">
-								<div className="max-w-md mx-auto">
-									<div className="w-16 h-16 bg-surface-hover rounded-full flex items-center justify-center mx-auto mb-4">
-										<TableIcon className="w-8 h-8 text-text-tertiary" />
+							<div className='bg-surface-card border border-border-subtle rounded-xl p-12 text-center'>
+								<div className='max-w-md mx-auto'>
+									<div className='w-16 h-16 bg-surface-hover rounded-full flex items-center justify-center mx-auto mb-4'>
+										<TableIcon className='w-8 h-8 text-text-tertiary' />
 									</div>
-									<h3 className="text-xl font-semibold text-text-primary mb-2">
-										{searchQuery || statusFilter !== 'all' ? 'No tables found' : 'No tables yet'}
+									<h3 className='text-xl font-semibold text-text-primary mb-2'>
+										{searchQuery || statusFilter !== 'all'
+											? 'No tables found'
+											: 'No tables yet'}
 									</h3>
-									<p className="text-text-secondary mb-6">
+									<p className='text-text-secondary mb-6'>
 										{searchQuery || statusFilter !== 'all'
 											? 'Try adjusting your search or filters'
 											: 'Get started by creating your first database table'}
@@ -348,17 +409,17 @@ export default function ProjectTables() {
 									{!searchQuery && statusFilter === 'all' && (
 										<button
 											onClick={handleCreateTable}
-											className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700
-												text-white rounded-lg font-medium transition-colors"
+											className='inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700
+												text-white rounded-lg font-medium transition-colors'
 										>
-											<Plus className="w-5 h-5" />
+											<Plus className='w-5 h-5' />
 											Create Your First Table
 										</button>
 									)}
 								</div>
 							</div>
 						) : (
-							<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+							<div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
 								{filteredTables.map((table: ProjectTable) => (
 									<TableCard
 										key={table.id}
@@ -374,13 +435,18 @@ export default function ProjectTables() {
 						)}
 					</>
 				) : (
-					<div className="bg-surface-card border border-border-subtle rounded-xl p-12 text-center">
-						<div className="max-w-md mx-auto">
-							<div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-								<Database className="w-8 h-8 text-primary-600 dark:text-primary-400" />
+					<div className='bg-surface-card border border-border-subtle rounded-xl p-12 text-center'>
+						<div className='max-w-md mx-auto'>
+							<div className='w-16 h-16 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4'>
+								<Database className='w-8 h-8 text-primary-600 dark:text-primary-400' />
 							</div>
-							<h3 className="text-xl font-semibold text-text-primary mb-2">Select a Project</h3>
-							<p className="text-text-secondary">Please select a project from the dropdown above to view and manage its database tables</p>
+							<h3 className='text-xl font-semibold text-text-primary mb-2'>
+								Select a Project
+							</h3>
+							<p className='text-text-secondary'>
+								Please select a project from the dropdown above
+								to view and manage its database tables
+							</p>
 						</div>
 					</div>
 				)}
@@ -426,4 +492,3 @@ export default function ProjectTables() {
 		</div>
 	)
 }
-

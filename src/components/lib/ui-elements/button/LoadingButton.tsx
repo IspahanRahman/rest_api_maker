@@ -3,8 +3,7 @@ import React, { ButtonHTMLAttributes } from 'react'
 import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export interface LoadingButtonProps
-	extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface LoadingButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 	isLoading?: boolean
 	loadingText?: string
 	variant?: 'primary' | 'secondary' | 'outline' | 'ghost'
@@ -51,7 +50,7 @@ export function LoadingButton({
 				className
 			)}
 		>
-			{isLoading && <Loader2 className="w-5 h-5 animate-spin" />}
+			{isLoading && <Loader2 className='w-5 h-5 animate-spin' />}
 			{isLoading ? loadingText || children : children}
 		</button>
 	)

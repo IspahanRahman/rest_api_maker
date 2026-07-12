@@ -6,7 +6,7 @@ export function useDeleteTableMutation(tableId: string) {
 		TABLES_ENDPOINTS.DELETE(tableId),
 		{},
 		{
-			method: 'DELETE',
+			method: 'DELETE'
 		}
 	)
 
@@ -14,6 +14,6 @@ export function useDeleteTableMutation(tableId: string) {
 		submit,
 		isLoading,
 		data,
-		errors,
+		errors
 	}
 }

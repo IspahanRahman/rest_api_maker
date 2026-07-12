@@ -30,7 +30,9 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
 			return Math.min(score, 5)
 		}
 
-		const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const handlePasswordChange = (
+			e: React.ChangeEvent<HTMLInputElement>
+		) => {
 			if (showStrength) {
 				setStrength(calculateStrength(e.target.value))
 			}
@@ -51,8 +53,8 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
 		}
 
 		return (
-			<div className="w-full">
-				<div className="relative">
+			<div className='w-full'>
+				<div className='relative'>
 					<FormInput
 						{...props}
 						ref={ref}
@@ -61,35 +63,42 @@ export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
 						className={cn('pr-12', className)}
 					/>
 					<button
-						type="button"
+						type='button'
 						onClick={() => setShowPassword(!showPassword)}
-						className="absolute right-3 top-[70%] -translate-y-1/2 text-text-secondary hover:text-text-primary-sem transition-colors p-1"
-						aria-label={showPassword ? 'Hide password' : 'Show password'}
+						className='absolute right-3 top-[70%] -translate-y-1/2 text-text-secondary hover:text-text-primary-sem transition-colors p-1'
+						aria-label={
+							showPassword ? 'Hide password' : 'Show password'
+						}
 					>
 						{showPassword ? (
-							<EyeOff className="w-5 h-5" />
+							<EyeOff className='w-5 h-5' />
 						) : (
-							<Eye className="w-5 h-5" />
+							<Eye className='w-5 h-5' />
 						)}
 					</button>
 				</div>
 
 				{showStrength && props.value && (
-					<div className="mt-2 space-y-1">
-						<div className="flex gap-1">
+					<div className='mt-2 space-y-1'>
+						<div className='flex gap-1'>
 							{[...Array(5)].map((_, i) => (
 								<div
 									key={i}
 									className={cn(
 										'h-1 flex-1 rounded-full transition-all duration-300',
-										i < strength ? getStrengthColor() : 'bg-gray-200 dark:bg-gray-700'
+										i < strength
+											? getStrengthColor()
+											: 'bg-gray-200 dark:bg-gray-700'
 									)}
 								/>
 							))}
 						</div>
 						{strength > 0 && (
-							<p className="text-xs text-text-secondary">
-								Password strength: <span className="font-medium">{getStrengthText()}</span>
+							<p className='text-xs text-text-secondary'>
+								Password strength:{' '}
+								<span className='font-medium'>
+									{getStrengthText()}
+								</span>
 							</p>
 						)}
 					</div>

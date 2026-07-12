@@ -1,53 +1,52 @@
 import { useQuery } from '@/hooks/useQuery'
 import { DASHBOARD_ENDPOINTS } from '@/apis/endpoints/dashboard_apis'
 
-
 interface Project {
-  id: number
-  name: string
-  description?: string
-  db_name: string
-  db_user: string
-  db_password: string
-  api_base_url: string
-  status: 'active' | 'inactive' | 'suspended'
-  created_at: string
-  updated_at: string
+	id: number
+	name: string
+	description?: string
+	db_name: string
+	db_user: string
+	db_password: string
+	api_base_url: string
+	status: 'active' | 'inactive' | 'suspended'
+	created_at: string
+	updated_at: string
 }
 
 interface Payment {
-  id: number
-  user_id: number
-  package_id: number
-  package_name?: string
-  amount: number
-  status: 'pending' | 'completed' | 'failed'
-  payment_method?: string
-  transaction_id?: string
-  created_at: string
-  updated_at: string
+	id: number
+	user_id: number
+	package_id: number
+	package_name?: string
+	amount: number
+	status: 'pending' | 'completed' | 'failed'
+	payment_method?: string
+	transaction_id?: string
+	created_at: string
+	updated_at: string
 }
 
 interface Activity {
-  id: number
-  user_id: number
-  action: string
-  description: string
-  timestamp: string
+	id: number
+	user_id: number
+	action: string
+	description: string
+	timestamp: string
 }
 
 export const useDashboardStats = () => {
-  return useQuery<any>(DASHBOARD_ENDPOINTS.STATS)
+	return useQuery<any>(DASHBOARD_ENDPOINTS.STATS)
 }
 
 export const useRecentProjects = () => {
-  return useQuery<Project[]>(DASHBOARD_ENDPOINTS.RECENT_PROJECTS)
+	return useQuery<Project[]>(DASHBOARD_ENDPOINTS.RECENT_PROJECTS)
 }
 
 export const useRecentPayments = () => {
-  return useQuery<Payment[]>(DASHBOARD_ENDPOINTS.RECENT_PAYMENTS)
+	return useQuery<Payment[]>(DASHBOARD_ENDPOINTS.RECENT_PAYMENTS)
 }
 
 export const useRecentActivity = () => {
-  return useQuery<Activity[]>(DASHBOARD_ENDPOINTS.ACTIVITY)
+	return useQuery<Activity[]>(DASHBOARD_ENDPOINTS.ACTIVITY)
 }
